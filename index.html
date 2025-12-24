@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solana Token Launchpad</title>
+
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  background:#0f0f1a;
+  color:#e0e0ff;
+  padding:1rem;
+}
+.container { max-width:480px; margin:auto; }
+.card {
+  background:#1a1a2e;
+  padding:1.5rem;
+  border-radius:16px;
+  border:1px solid #334155;
+}
+button, input, textarea, select {
+  width:100%;
+  padding:.8rem;
+  margin-bottom:1rem;
+  border-radius:10px;
+  border:1px solid #334155;
+  background:#111827;
+  color:white;
+}
+button {
+  background:#7c3aed;
+  font-weight:bold;
+  cursor:pointer;
+}
+.warning {
+  background:rgba(245,158,11,.15);
+  border:1px solid #f59e0b;
+  padding:1rem;
+  border-radius:12px;
+  margin-bottom:1rem;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>Solana Token Launchpad</h2>
+
+<div class="warning">
+⚠️ Devnet by default. Mainnet uses REAL SOL.
+</div>
+
+<div class="card">
+
+<select id="network">
+  <option value="devnet" selected>Devnet (testing)</option>
+  <option value="mainnet-beta">Mainnet (REAL SOL)</option>
+</select>
+
+<button id="walletBtn">Connect Phantom</button>
+
+<form id="form">
+  <input id="name" placeholder="Token Name" required>
+  <input id="symbol" placeholder="Symbol" maxlength="8" required>
+  <input id="supply" type="number" placeholder="Total Supply" required>
+  <input id="image" placeholder="Image URL (https://...png)">
+  <textarea id="description" placeholder="Description"></textarea>
+  <button type="submit">Launch Token</button>
+</form>
+
+</div>
+</div>
+
+<!-- LIBRARIES -->
+<script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+<script src="https://unpkg.com/@solana/spl-token@latest/lib/index.iife.min.js"></script>
+<script src="https://unpkg.com/@metaplex-foundation/mpl-token-metadata@latest/dist/index.iife.js"></script>
+
+<script>
+const {
+  Connection, clusterApiUrl, Transaction, SystemProgram, Keypair
+} = solanaWeb3;
+
+const {
+  TOKEN_PROGRAM_ID, MINT_SIZE,
+  getMinimumBalanceForRentExemptMint,
+  createInitializeMintInstruction,
+  getAssociatedTokenAddress,
+  createAssociatedTokenAccountInstruction,
+  createMintToInstruction,
+  createSetAuthorityInstruction,
+  AuthorityType
+} = splToken;
+
+const {
+  createCreateMetadataAccountV3Instruction,
+  PROGRAM_ID: METADATA_PROGRAM_ID
+} = mplTokenMetadata;
+
+let wallet = null;
+let connection = new Connection(clusterApiUrl('devnet'),'confirmed');
+
+const walletBtn = document.getElementById('walletBtn');
+const form = document.getElementById('form');
+const network = document.getElementById('network');
+
+form.querySelectorAll('input,textarea,button').forEach(e=>e.disabled=true);
+
+network.onchange = () => {
+  connection = new Connection(clusterApiUrl(network.value),'confirmed');
+  if(network.value==='mainnet-beta'){
+    alert('MAINNET MODE — REAL SOL WILL BE USED');
+  }
+};
+
+walletBtn.onclick = async () => {
+  wallet = await window.solana.connect();
+  walletBtn.textContent = wallet.publicKey.toString().slice(0,4)+'…';
+  form.querySelectorAll('input,textarea,button').forEach(e=>e.disabled=false);
+};
+
+form.onsubmit = async (e) => {
+e.preventDefault();
+
+const name = form.name.value;
+const symbol = form.symbol.value;
+const supply = Number(form.supply.value);
+const image = form.image.value || '';
+const description = form.description.value || '';
+
+if(network.value==='mainnet-beta'){
+  if(!confirm('FINAL WARNING: MAINNET TOKEN CREATION. CONTINUE?')) return;
+}
+
+const balance = await connection.getBalance(wallet.publicKey);
+if(balance < 0.05 * solanaWeb3.LAMPORTS_PER_SOL){
+  alert('Not enough SOL');
+  return;
+}
+
+const mint = Keypair.generate();
+const lamports = await getMinimumBalanceForRentExemptMint(connection);
+const ata = await getAssociatedTokenAddress(mint.publicKey, wallet.publicKey);
+
+const metadataPDA = solanaWeb3.PublicKey.findProgramAddressSync(
+  [
+    Buffer.from('metadata'),
+    METADATA_PROGRAM_ID.toBuffer(),
+    mint.publicKey.toBuffer()
+  ],
+  METADATA_PROGRAM_ID
+)[0];
+
+const tx = new Transaction().add(
+  SystemProgram.createAccount({
+    fromPubkey: wallet.publicKey,
+    newAccountPubkey: mint.publicKey,
+    lamports,
+    space: MINT_SIZE,
+    programId: TOKEN_PROGRAM_ID
+  }),
+  createInitializeMintInstruction(
+    mint.publicKey, 9, wallet.publicKey, wallet.publicKey
+  ),
+  createAssociatedTokenAccountInstruction(
+    wallet.publicKey, ata, wallet.publicKey, mint.publicKey
+  ),
+  createMintToInstruction(
+    mint.publicKey, ata, wallet.publicKey, supply * 1e9
+  ),
+  createCreateMetadataAccountV3Instruction(
+    {
+      metadata: metadataPDA,
+      mint: mint.publicKey,
+      mintAuthority: wallet.publicKey,
+      payer: wallet.publicKey,
+      updateAuthority: wallet.publicKey
+    },
+    {
+      createMetadataAccountArgsV3: {
+        data: {
+          name,
+          symbol,
+          uri: image,
+          sellerFeeBasisPoints: 0,
+          creators: null,
+          collection: null,
+          uses: null
+        },
+        isMutable: false,
+        collectionDetails: null
+      }
+    }
+  ),
+  createSetAuthorityInstruction(
+    mint.publicKey, wallet.publicKey,
+    AuthorityType.MintTokens, null
+  ),
+  createSetAuthorityInstruction(
+    mint.publicKey, wallet.publicKey,
+    AuthorityType.FreezeAccount, null
+  )
+);
+
+tx.feePayer = wallet.publicKey;
+tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+tx.partialSign(mint);
+
+const signed = await window.solana.signTransaction(tx);
+const sig = await connection.sendRawTransaction(signed.serialize());
+await connection.confirmTransaction(sig);
+
+const base = network.value==='mainnet-beta'
+  ? 'https://explorer.solana.com/address/'
+  : 'https://explorer.solana.com/address/?cluster=devnet';
+
+alert(`TOKEN COMPLETE ✅
+
+Mint:
+${mint.publicKey}
+
+Explorer:
+${base}${mint.publicKey}
+`);
+};
+</script>
+
+</body>
+</html>
