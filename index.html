@@ -3,54 +3,60 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-<title>Solana Mobile Launchpad</title>
+<title>Solana Multi-Token Launchpad</title>
 <script src="https://bundle.run/buffer@6.0.3"></script>
 <style>
-  body { font-family: system-ui, -apple-system, sans-serif; background:#0d0d17; color:#fff; padding:15px; margin:0; }
-  .card { background:#1a1a2e; padding:20px; border-radius:24px; border:1px solid #334155; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-  h2 { margin:0 0 20px 0; color:#8b5cf6; text-align:center; font-size: 1.5rem; }
-  label { display:block; margin-bottom:8px; font-weight:600; color:#94a3b8; font-size:14px; }
-  input, select, button { width:100%; padding:14px; margin-bottom:15px; border-radius:12px; border:1px solid #334155; background:#0f172a; color:#fff; font-size:16px; box-sizing:border-box; outline:none; }
-  button { background:#7c3aed; border:none; font-weight:bold; cursor:pointer; transition: 0.2s; }
-  button:active { transform: scale(0.96); opacity: 0.8; }
-  #imagePreview { width:100%; max-height:180px; border-radius:12px; object-fit:contain; display:none; margin-bottom:15px; background:#000; border: 1px dashed #4b5563; }
-  .status { padding:15px; border-radius:12px; font-size:14px; display:none; line-height:1.4; word-break: break-all; margin-top:10px; }
-  .info-box { background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; padding: 10px; border-radius: 10px; font-size: 12px; margin-bottom: 15px; color: #a7f3d0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background:#0a0a12; color:#fff; padding:15px; margin:0; line-height: 1.5; }
+  .card { max-width: 500px; margin: auto; background:#161625; padding:20px; border-radius:24px; border:1px solid #2d2d44; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  h2 { margin:0 0 10px 0; color:#a78bfa; text-align:center; }
+  p.subtitle { text-align: center; color: #94a3b8; font-size: 0.85rem; margin-bottom: 20px; }
+  label { display:block; margin-bottom:5px; font-weight:600; color:#94a3b8; font-size:13px; }
+  input, select, textarea, button { width:100%; padding:12px; margin-bottom:15px; border-radius:12px; border:1px solid #2d2d44; background:#0f0f1a; color:#fff; font-size:16px; box-sizing:border-box; outline:none; }
+  textarea { height: 80px; resize: none; font-family: inherit; }
+  button { background:#7c3aed; border:none; font-weight:bold; cursor:pointer; transition: 0.2s; margin-top: 5px; }
+  button:active { transform: scale(0.97); }
+  button.secondary { background: #334155; }
+  #imagePreview { width:100px; height:100px; border-radius:15px; object-fit:cover; display:none; margin: 0 auto 15px auto; border: 2px solid #7c3aed; background: #000; }
+  .status { padding:15px; border-radius:12px; font-size:14px; display:none; word-break: break-all; margin-top:15px; border: 1px solid transparent; }
+  .success-link { color: #fff; text-decoration: underline; font-weight: bold; }
 </style>
 </head>
 <body>
   <div class="card">
     <h2>Token Launchpad</h2>
+    <p class="subtitle">Create & Deploy SPL Tokens on the fly</p>
     
-    <div class="info-box">
-      🛡️ <b>Safety Enabled:</b> Mint & Freeze authorities will be revoked. Initial supply will be minted to your wallet, then the "keys" are destroyed.
-    </div>
+    <button id="connectBtn">Connect Phantom Wallet</button>
 
-    <button id="connectBtn">1. Connect Phantom Wallet</button>
-
-    <form id="launchForm" style="display:none;">
-      <label>Step 2: Select Token Logo</label>
-      <img id="imagePreview" onclick="document.getElementById('imageInput').click()" />
-      <input type="file" id="imageInput" accept="image/*" style="display:none;" />
-      <button type="button" onclick="document.getElementById('imageInput').click()" style="background:#334155;">Open Phone Gallery</button>
-
+    <div id="launchpadUI" style="display:none;">
       <label>Network</label>
       <select id="network">
-        <option value="devnet">Devnet (Testing)</option>
+        <option value="devnet">Devnet (Testnet)</option>
         <option value="mainnet-beta">Mainnet (Real SOL)</option>
       </select>
 
-      <label>Token Name</label>
-      <input id="name" placeholder="eg. Galactic Credits" required />
+      <label>Token Logo</label>
+      <img id="imagePreview" />
+      <input type="file" id="imageInput" accept="image/*" />
 
-      <label>Symbol</label>
-      <input id="symbol" placeholder="eg. GC" maxlength="10" required />
+      <form id="launchForm">
+        <label>Token Name</label>
+        <input id="name" placeholder="e.g. SolPanda" required />
 
-      <label>Total Supply</label>
-      <input id="supply" type="number" placeholder="1000000" required />
+        <label>Symbol</label>
+        <input id="symbol" placeholder="e.g. PANDA" maxlength="10" required />
 
-      <button type="submit" id="submitBtn">3. Launch & Renounce Authorities 🚀</button>
-    </form>
+        <label>Total Supply</label>
+        <input id="supply" type="number" placeholder="1000000" required />
+
+        <label>Description (Metadata)</label>
+        <textarea id="description" placeholder="What is this token about?"></textarea>
+
+        <button type="submit" id="submitBtn">Deploy New Token 🚀</button>
+      </form>
+
+      <button class="secondary" onclick="resetForm()">Clear / New Launch</button>
+    </div>
 
     <div id="status" class="status"></div>
   </div>
@@ -60,10 +66,9 @@
   <script src="https://unpkg.com/@metaplex-foundation/mpl-token-metadata@2.13.0/dist/index.iife.js"></script>
 
   <script>
-    // Initialize Buffer for the browser environment
     window.Buffer = window.buffer.Buffer;
     
-    // Pinata JWT (Pre-loaded)
+    // YOUR AUTHORIZED PINATA JWT
     const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI3N2YxNDQxYi04N2U2LTQ1OTMtOGVmNi0wY2UzOTJlZWIwMmEiLCJlbWFpbCI6Impqbzk1ODU3NUBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwicGluX3BvbGljeSI6eyJyZWdpb25zIjpbeyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJGUkExIn0seyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJOWUMxIn1dLCJ2ZXJzaW9uIjoxfSwibWZhX2VuYWJsZWQiOmZhbHNlLCJzdGF0dXMiOiJBQ1RJVkUifSwiYXV0aGVudGljYXRpb25UeXBlIjoic2NvcGVkS2V5Iiwic2NvcGVkS2V5S2V5IjoiYmNlZDI3MTQyMzdmOWFiYjUyMTYiLCJzY29wZWRLZXlTZWNyZXQiOiIwN2M2M2M4YTk4NzBiMmU2NzMzNjkzOGM3NWIyZDFhZjZhYTg0MzVjZGIwOWIyODQzYzI1NjAyNGQ5YmZiOGU5IiwiZXhwIjoxNzk4NzM4NjA0fQ.ateDL6iIohY2sqOygk6UBrUMgOpGdCJc2ij9eLq406w";
 
     const { Connection, clusterApiUrl, Transaction, SystemProgram, Keypair, PublicKey } = solanaWeb3;
@@ -78,19 +83,19 @@
     let wallet = null;
     let connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
 
-    // UI Elements
     const connectBtn = document.getElementById('connectBtn');
-    const launchForm = document.getElementById('launchForm');
+    const launchpadUI = document.getElementById('launchpadUI');
+    const status = document.getElementById('status');
     const imageInput = document.getElementById('imageInput');
     const imagePreview = document.getElementById('imagePreview');
-    const status = document.getElementById('status');
 
-    // Network switcher
+    // Toggle Network
     document.getElementById('network').onchange = (e) => {
       connection = new Connection(clusterApiUrl(e.target.value), 'confirmed');
+      showStatus(`Network switched to ${e.target.value}`, false);
     };
 
-    // Gallery Preview Logic
+    // Gallery Preview
     imageInput.onchange = (e) => {
       const file = e.target.files[0];
       if (file) {
@@ -103,119 +108,93 @@
       }
     };
 
-    // Wallet Connect Logic with Mobile Deep Linking
-    connectBtn.onclick = async () => {
-      const provider = window.solana || window.phantom?.solana;
-      
-      if (!provider) {
-        // Not in Phantom browser? Try to force open Phantom app
-        const currentUrl = window.location.href.replace(/^https?:\/\//, "");
-        window.location.href = `https://phantom.app/ul/browse/https://${currentUrl}`;
-        return;
-      }
-
-      try {
-        const resp = await provider.connect();
-        wallet = provider;
-        connectBtn.style.display = 'none';
-        launchForm.style.display = 'block';
-        showStatus("Wallet Connected Successfully!");
-      } catch (err) {
-        alert("Connection refused by user.");
-      }
-    };
+    function resetForm() {
+      document.getElementById('launchForm').reset();
+      imagePreview.style.display = 'none';
+      status.style.display = 'none';
+    }
 
     function showStatus(msg, err = false) {
       status.style.display = 'block';
       status.innerHTML = msg;
-      status.style.background = err ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)';
+      status.style.background = err ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)';
       status.style.border = `1px solid ${err ? '#ef4444' : '#22c55e'}`;
     }
 
-    async function uploadToIPFS(file, name, symbol) {
+    // Connect logic
+    connectBtn.onclick = async () => {
+      const provider = window.solana || window.phantom?.solana;
+      if (!provider) {
+        const url = window.location.href.replace(/^https?:\/\//, "");
+        window.location.href = `https://phantom.app/ul/browse/https://${url}`;
+        return;
+      }
+      try {
+        const resp = await provider.connect();
+        wallet = provider;
+        connectBtn.style.display = 'none';
+        launchpadUI.style.display = 'block';
+      } catch (err) { alert("Wallet connection rejected."); }
+    };
+
+    async function uploadToIPFS(file, name, symbol, description) {
       const formData = new FormData();
       formData.append('file', file);
-      
-      // Upload image to IPFS via Pinata
       const imgRes = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
         method: "POST", headers: { Authorization: `Bearer ${PINATA_JWT}` }, body: formData
       });
       const imgData = await imgRes.json();
       const imgUrl = `https://gateway.pinata.cloud/ipfs/${imgData.IpfsHash}`;
 
-      // Create Metadata JSON (Standard Metaplex Format)
       const meta = JSON.stringify({ 
-        name: name, 
-        symbol: symbol, 
-        description: "Launched via Mobile Launchpad",
-        image: imgUrl, 
-        attributes: [],
+        name, symbol, description, image: imgUrl,
         properties: { files: [{ uri: imgUrl, type: "image/png" }] } 
       });
 
       const jsonRes = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
-        method: "POST", 
-        headers: { Authorization: `Bearer ${PINATA_JWT}`, "Content-Type": "application/json" }, 
-        body: meta
+        method: "POST", headers: { Authorization: `Bearer ${PINATA_JWT}`, "Content-Type": "application/json" }, body: meta
       });
       const jsonData = await jsonRes.json();
       return `https://gateway.pinata.cloud/ipfs/${jsonData.IpfsHash}`;
     }
 
-    launchForm.onsubmit = async (e) => {
+    document.getElementById('launchForm').onsubmit = async (e) => {
       e.preventDefault();
       const submitBtn = document.getElementById('submitBtn');
       submitBtn.disabled = true;
       
       try {
         const file = imageInput.files[0];
-        if(!file) throw new Error("Please select a logo from your gallery!");
+        if(!file) throw new Error("Please upload a token logo.");
 
-        showStatus("1/3: Uploading photo & metadata to IPFS...");
-        const uri = await uploadToIPFS(file, document.getElementById('name').value, document.getElementById('symbol').value);
+        showStatus("Step 1/3: Pinning metadata to IPFS...");
+        const uri = await uploadToIPFS(
+          file, 
+          document.getElementById('name').value, 
+          document.getElementById('symbol').value,
+          document.getElementById('description').value
+        );
         
-        showStatus("2/3: Generating Mint & Revoking Authorities...");
+        showStatus("Step 2/3: Building Transaction...");
         const mint = Keypair.generate();
         const payer = wallet.publicKey;
-        
-        // Find the Metadata Account PDA
-        const [meta] = PublicKey.findProgramAddressSync(
-          [Buffer.from("metadata"), METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()], 
-          METADATA_PROGRAM_ID
-        );
-
+        const [meta] = PublicKey.findProgramAddressSync([Buffer.from("metadata"), METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()], METADATA_PROGRAM_ID);
         const ata = await getAssociatedTokenAddress(mint.publicKey, payer);
         const rent = await getMinimumBalanceForRentExemptMint(connection);
 
         const tx = new Transaction().add(
-          // 1. Create the account for the Mint
           SystemProgram.createAccount({ fromPubkey: payer, newAccountPubkey: mint.publicKey, space: MINT_SIZE, lamports: rent, programId: TOKEN_PROGRAM_ID }),
-          // 2. Initialize the Mint (9 Decimals)
           createInitializeMintInstruction(mint.publicKey, 9, payer, payer),
-          // 3. Create the user's Token Account (ATA)
           createAssociatedTokenAccountInstruction(payer, ata, payer, mint.publicKey),
-          // 4. Mint the supply to the user's wallet
           createMintToInstruction(mint.publicKey, ata, payer, BigInt(document.getElementById('supply').value) * BigInt(10**9)),
-          // 5. Create Metadata Account (shows logo/name in wallet)
           createCreateMetadataAccountV3Instruction(
             { metadata: meta, mint: mint.publicKey, mintAuthority: payer, payer, updateAuthority: payer },
             { createMetadataAccountArgsV3: {
-                data: { 
-                    name: document.getElementById('name').value, 
-                    symbol: document.getElementById('symbol').value, 
-                    uri: uri, 
-                    sellerFeeBasisPoints: 0, 
-                    creators: null, 
-                    collection: null, 
-                    uses: null 
-                },
-                isMutable: true, 
-                collectionDetails: null
+                data: { name: document.getElementById('name').value, symbol: document.getElementById('symbol').value, uri, sellerFeeBasisPoints: 0, creators: null, collection: null, uses: null },
+                isMutable: true, collectionDetails: null
             }}
           ),
-          // 6. REVOKE MINT AUTHORITY (No more supply can be created)
           createSetAuthorityInstruction(mint.publicKey, payer, AuthorityType.MintTokens, null),
-          // 7. REVOKE FREEZE AUTHORITY (Tokens cannot be frozen in wallets)
           createSetAuthorityInstruction(mint.publicKey, payer, AuthorityType.FreezeAccount, null)
         );
 
@@ -223,14 +202,14 @@
         tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
         tx.partialSign(mint);
 
-        showStatus("3/3: Waiting for Phantom Signature...");
+        showStatus("Step 3/3: Waiting for Signature...");
         const signed = await wallet.signTransaction(tx);
         const sig = await connection.sendRawTransaction(signed.serialize());
         
-        showStatus(`🚀 SUCCESS!<br>Mint: ${mint.publicKey.toBase58()}<br><b>Authorities Revoked</b><br><a href="https://solscan.io/tx/${sig}?cluster=${document.getElementById('network').value}" target="_blank" style="color:#fff;">View on Solscan</a>`);
+        const explorerBase = document.getElementById('network').value === 'mainnet-beta' ? 'https://solscan.io' : 'https://solscan.io?cluster=devnet';
+        showStatus(`🚀 <b>Token Launched!</b><br>Mint: ${mint.publicKey.toBase58()}<br><a class="success-link" href="${explorerBase}/tx/${sig}" target="_blank">View on Solscan</a>`, false);
       } catch (err) {
         showStatus("Error: " + err.message, true);
-        console.error(err);
       } finally {
         submitBtn.disabled = false;
       }
