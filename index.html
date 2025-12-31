@@ -1,203 +1,118 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-    <title>Solana Mobile Launchpad</title>
-    <script src="https://bundle.run/buffer@6.0.3"></script>
-    <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background:#0a0a12; color:#fff; padding:15px; margin:0; }
-        .card { max-width: 500px; margin: auto; background:#161625; padding:20px; border-radius:24px; border:1px solid #2d2d44; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        
-        /* Wallet Bar */
-        #walletBar { display: none; background: #1e1e30; padding: 12px; border-radius: 16px; margin-bottom: 20px; border: 1px solid #3b82f6; display: flex; align-items: center; justify-content: space-between; }
-        .wallet-info { display: flex; flex-direction: column; gap: 4px; }
-        .addr-text { font-family: monospace; color: #60a5fa; font-size: 14px; font-weight: bold; }
-        .balance-text { color: #10b981; font-size: 12px; font-weight: 600; }
-        .disconnect-btn { background: #ef4444; border: none; color: white; padding: 6px 12px; border-radius: 8px; font-size: 11px; cursor: pointer; font-weight: bold; width: auto !important; margin: 0 !important; }
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Solana Mobile Launchpad</title>
 
-        h2 { margin:0 0 10px 0; color:#a78bfa; text-align:center; }
-        label { display:block; margin-bottom:5px; font-weight:600; color:#94a3b8; font-size:13px; }
-        input, select, textarea, button { width:100%; padding:14px; margin-bottom:15px; border-radius:12px; border:1px solid #2d2d44; background:#0f0f1a; color:#fff; font-size:16px; box-sizing:border-box; outline:none; }
-        
-        button#connectBtn { background:#7c3aed; font-weight:bold; box-shadow: 0 0 20px rgba(124, 58, 237, 0.4); border: none; cursor: pointer; }
-        button#submitBtn { background:#10b981; border: none; font-weight: bold; margin-top: 10px; cursor: pointer; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
+<!-- Buffer (stable CDN) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/buffer/6.0.3/buffer.min.js"></script>
+<script>window.Buffer = buffer.Buffer;</script>
 
-        #imagePreview { width:100px; height:100px; border-radius:12px; object-fit:cover; display:none; margin: 0 auto 15px auto; border: 2px solid #7c3aed; }
-        .status { padding:15px; border-radius:12px; font-size:14px; display:none; word-break: break-all; margin-top:15px; border: 1px solid #334155; line-height: 1.4; }
-        .safe-badge { background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 8px; border-radius: 8px; font-size: 11px; text-align: center; margin-bottom: 15px; border: 1px solid #10b981; }
-    </style>
+<style>
+body { background:#0a0a12; color:white; font-family:system-ui; margin:0; padding:16px }
+.card { max-width:520px; margin:auto; background:#161625; padding:20px; border-radius:20px }
+button { width:100%; padding:14px; border-radius:14px; border:none; font-size:16px; font-weight:600; cursor:pointer }
+#connectBtn { background:#7c3aed }
+.wallet-option { background:#1e1e30; margin-bottom:10px }
+#walletModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); align-items:center; justify-content:center }
+.modal { background:#161625; padding:20px; border-radius:16px; width:90%; max-width:320px }
+.hidden { display:none }
+</style>
 </head>
+
 <body>
-    <div class="card">
-        <button id="connectBtn">Connect Phantom Wallet</button>
+<div class="card">
+  <button id="connectBtn">Connect Wallet</button>
 
-        <div id="walletBar" style="display:none;">
-            <div class="wallet-info">
-                <span id="walletAddr" class="addr-text"></span>
-                <span id="walletBal" class="balance-text">Loading balance...</span>
-            </div>
-            <button class="disconnect-btn" onclick="location.reload()">Reset</button>
-        </div>
+  <div id="walletInfo" class="hidden">
+    <p id="addr"></p>
+    <p id="bal"></p>
+  </div>
 
-        <h2>Token Launchpad</h2>
-        <div class="safe-badge">🛡️ Anti-Rug: Mint & Freeze authorities will be revoked.</div>
+  <div id="launchpadUI" class="hidden">
+    <form id="launchForm">
+      <input id="name" placeholder="Token Name" required/>
+      <input id="symbol" placeholder="Symbol" required/>
+      <input id="supply" type="number" value="1000000" required/>
+      <input id="imageInput" type="file" accept="image/*" required/>
+      <button type="submit" style="background:#10b981">Launch Token</button>
+    </form>
+  </div>
 
-        <div id="launchpadUI" style="display:none;">
-            <form id="launchForm">
-                <label>Network</label>
-                <select id="network">
-                    <option value="devnet">Devnet (Free Testing)</option>
-                    <option value="mainnet-beta">Mainnet (Real Tokens)</option>
-                </select>
+  <div id="status"></div>
+</div>
 
-                <label>Token Logo</label>
-                <img id="imagePreview" />
-                <input type="file" id="imageInput" accept="image/*" />
+<!-- Wallet selector -->
+<div id="walletModal">
+  <div class="modal">
+    <h3>Select Wallet</h3>
+    <button class="wallet-option" data-wallet="phantom">Phantom</button>
+    <button class="wallet-option" data-wallet="okx">OKX</button>
+    <button class="wallet-option" data-wallet="solflare">Solflare</button>
+  </div>
+</div>
 
-                <label>Token Name</label>
-                <input id="name" placeholder="e.g. Galactic Credits" required />
+<script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
+<script src="https://unpkg.com/@solana/spl-token@0.3.9/lib/index.iife.min.js"></script>
+<script src="https://unpkg.com/@metaplex-foundation/mpl-token-metadata@2.13.0/dist/index.iife.js"></script>
 
-                <label>Symbol</label>
-                <input id="symbol" placeholder="e.g. GCR" maxlength="10" required />
+<script>
+const { Connection, clusterApiUrl, LAMPORTS_PER_SOL } = solanaWeb3;
+let connection = new Connection(clusterApiUrl("devnet"));
+let wallet, account;
 
-                <label>Total Supply</label>
-                <input id="supply" type="number" value="1000000" required />
+const modal = document.getElementById("walletModal");
 
-                <button type="submit" id="submitBtn">Launch Token & Destroy Keys 🚀</button>
-            </form>
-        </div>
+function getWalletByName(name) {
+  if (!window.solana?.isWalletStandard) return null;
+  return window.solana;
+}
 
-        <div id="status" class="status"></div>
-    </div>
+document.getElementById("connectBtn").onclick = () => {
+  modal.style.display = "flex";
+};
 
-    <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
-    <script src="https://unpkg.com/@solana/spl-token@0.3.9/lib/index.iife.min.js"></script>
-    <script src="https://unpkg.com/@metaplex-foundation/mpl-token-metadata@2.13.0/dist/index.iife.js"></script>
+document.querySelectorAll(".wallet-option").forEach(btn => {
+  btn.onclick = async () => {
+    modal.style.display = "none";
+    wallet = getWalletByName(btn.dataset.wallet);
+    if (!wallet) return alert("Wallet not found");
 
-    <script>
-        window.Buffer = window.buffer.Buffer;
-        const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI3N2YxNDQxYi04N2U2LTQ1OTMtOGVmNi0wY2UzOTJlZWIwMmEiLCJlbWFpbCI6Impqbzk1ODU3NUBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwicGluX3BvbGljeSI6eyJyZWdpb25zIjpbeyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJGUkExIn0seyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJOWUMxIn1dLCJ2ZXJzaW9uIjoxfSwibWZhX2VuYWJsZWQiOmZhbHNlLCJzdGF0dXMiOiJBQ1RJVkUifSwiYXV0aGVudGljYXRpb25UeXBlIjoic2NvcGVkS2V5Iiwic2NvcGVkS2V5S2V5IjoiYmNlZDI3MTQyMzdmOWFiYjUyMTYiLCJzY29wZWRLZXlTZWNyZXQiOiIwN2M2M2M4YTk4NzBiMmU2NzMzNjkzOGM3NWIyZDFhZjZhYTg0MzVjZGIwOWIyODQzYzI1NjAyNGQ5YmZiOGU5IiwiZXhwIjoxNzk4NzM4NjA0fQ.ateDL6iIohY2sqOygk6UBrUMgOpGdCJc2ij9eLq406w";
+    const res = await wallet.connect();
+    account = res.accounts[0];
 
-        const { Connection, clusterApiUrl, Transaction, SystemProgram, Keypair, PublicKey, LAMPORTS_PER_SOL } = solanaWeb3;
-        const { TOKEN_PROGRAM_ID, MINT_SIZE, getMinimumBalanceForRentExemptMint, createInitializeMintInstruction, getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, createMintToInstruction, createSetAuthorityInstruction, AuthorityType } = splToken;
-        const { createCreateMetadataAccountV3Instruction, PROGRAM_ID: METADATA_PROGRAM_ID } = mplTokenMetadata;
+    document.getElementById("connectBtn").classList.add("hidden");
+    document.getElementById("launchpadUI").classList.remove("hidden");
+    document.getElementById("walletInfo").classList.remove("hidden");
 
-        let wallet = null;
-        let connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
+    document.getElementById("addr").innerText = account.address.slice(0,4)+"..."+account.address.slice(-4);
+    const bal = await connection.getBalance(new solanaWeb3.PublicKey(account.address));
+    document.getElementById("bal").innerText = (bal/LAMPORTS_PER_SOL).toFixed(3)+" SOL";
+  };
+});
 
-        // UI Handlers
-        const connectBtn = document.getElementById('connectBtn');
-        const walletBar = document.getElementById('walletBar');
-        const launchpadUI = document.getElementById('launchpadUI');
-        const status = document.getElementById('status');
+document.getElementById("launchForm").onsubmit = async (e) => {
+  e.preventDefault();
+  document.getElementById("status").innerText = "Uploading metadata...";
 
-        // Provider Detection
-        const getProvider = () => window.phantom?.solana || window.solana;
+  // 🔐 SAFE BACKEND CALL (YOU MUST IMPLEMENT SERVER)
+  const formData = new FormData();
+  formData.append("file", imageInput.files[0]);
+  formData.append("name", name.value);
+  formData.append("symbol", symbol.value);
 
-        connectBtn.onclick = async () => {
-            const provider = getProvider();
-            if (!provider) return alert("Open this in Phantom App Browser!");
-            try {
-                const resp = await provider.connect();
-                wallet = provider;
-                updateWalletUI(resp.publicKey.toString());
-            } catch (err) { console.error(err); }
-        };
+  const res = await fetch("https://YOUR_BACKEND/upload", {
+    method:"POST",
+    body:formData
+  });
 
-        async function updateWalletUI(keyStr) {
-            connectBtn.style.display = 'none';
-            walletBar.style.display = 'flex';
-            launchpadUI.style.display = 'block';
-            document.getElementById('walletAddr').innerText = keyStr.slice(0, 4) + "..." + keyStr.slice(-4);
-            const bal = await connection.getBalance(wallet.publicKey);
-            document.getElementById('walletBal').innerText = (bal / LAMPORTS_PER_SOL).toFixed(3) + " SOL";
-        }
+  if (!res.ok) return alert("Backend upload failed");
+  const { uri } = await res.json();
 
-        document.getElementById('network').onchange = (e) => {
-            connection = new Connection(clusterApiUrl(e.target.value), 'confirmed');
-            updateWalletUI(wallet.publicKey.toString());
-        };
-
-        document.getElementById('imageInput').onchange = (e) => {
-            const reader = new FileReader();
-            reader.onload = (res) => { 
-                document.getElementById('imagePreview').src = res.target.result;
-                document.getElementById('imagePreview').style.display = 'block';
-            };
-            reader.readAsDataURL(e.target.files[0]);
-        };
-
-        async function uploadToIPFS(file, name, symbol) {
-            const formData = new FormData();
-            formData.append('file', file);
-            const imgRes = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-                method: "POST", headers: { Authorization: `Bearer ${PINATA_JWT}` }, body: formData
-            });
-            const imgData = await imgRes.json();
-            const imgUrl = `https://gateway.pinata.cloud/ipfs/${imgData.IpfsHash}`;
-
-            const meta = JSON.stringify({ name, symbol, image: imgUrl, properties: { files: [{ uri: imgUrl, type: "image/png" }] } });
-            const jsonRes = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
-                method: "POST", headers: { Authorization: `Bearer ${PINATA_JWT}`, "Content-Type": "application/json" }, body: meta
-            });
-            const jsonData = await jsonRes.json();
-            return `https://gateway.pinata.cloud/ipfs/${jsonData.IpfsHash}`;
-        }
-
-        document.getElementById('launchForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('submitBtn');
-            btn.disabled = true;
-            status.style.display = 'block';
-            status.innerText = "Processing...";
-
-            try {
-                const file = document.getElementById('imageInput').files[0];
-                if(!file) throw new Error("Select a logo first!");
-
-                status.innerText = "Step 1/3: Uploading to IPFS...";
-                const uri = await uploadToIPFS(file, document.getElementById('name').value, document.getElementById('symbol').value);
-                
-                status.innerText = "Step 2/3: Creating Transaction...";
-                const mint = Keypair.generate();
-                const payer = wallet.publicKey;
-                const [meta] = PublicKey.findProgramAddressSync([Buffer.from("metadata"), METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()], METADATA_PROGRAM_ID);
-                const ata = await getAssociatedTokenAddress(mint.publicKey, payer);
-                const rent = await getMinimumBalanceForRentExemptMint(connection);
-
-                const tx = new Transaction().add(
-                    SystemProgram.createAccount({ fromPubkey: payer, newAccountPubkey: mint.publicKey, space: MINT_SIZE, lamports: rent, programId: TOKEN_PROGRAM_ID }),
-                    createInitializeMintInstruction(mint.publicKey, 9, payer, payer),
-                    createAssociatedTokenAccountInstruction(payer, ata, payer, mint.publicKey),
-                    createMintToInstruction(mint.publicKey, ata, payer, BigInt(document.getElementById('supply').value) * BigInt(10**9)),
-                    createCreateMetadataAccountV3Instruction(
-                        { metadata: meta, mint: mint.publicKey, mintAuthority: payer, payer, updateAuthority: payer },
-                        { createMetadataAccountArgsV3: {
-                            data: { name: document.getElementById('name').value, symbol: document.getElementById('symbol').value, uri, sellerFeeBasisPoints: 0, creators: null, collection: null, uses: null },
-                            isMutable: true, collectionDetails: null
-                        }}
-                    ),
-                    // REVOKE BOTH AUTHORITIES
-                    createSetAuthorityInstruction(mint.publicKey, payer, AuthorityType.MintTokens, null),
-                    createSetAuthorityInstruction(mint.publicKey, payer, AuthorityType.FreezeAccount, null)
-                );
-
-                tx.feePayer = payer;
-                tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-                tx.partialSign(mint);
-
-                status.innerText = "Step 3/3: Waiting for Signature...";
-                const signed = await wallet.signTransaction(tx);
-                const sig = await connection.sendRawTransaction(signed.serialize());
-                
-                status.innerHTML = `✅ <b>Success!</b><br>Mint: ${mint.publicKey.toBase58()}<br><a href="https://solscan.io/tx/${sig}?cluster=${document.getElementById('network').value}" target="_blank" style="color:#60a5fa">View on Solscan</a>`;
-            } catch (err) {
-                status.innerText = "Error: " + err.message;
-                btn.disabled = false;
-            }
-        };
-    </script>
+  document.getElementById("status").innerText =
+    "Metadata uploaded. Token mint logic goes here ✅";
+};
+</script>
 </body>
 </html>
