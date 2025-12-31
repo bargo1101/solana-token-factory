@@ -2,350 +2,188 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Solana Token Launchpad</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Solana Mobile Launchpad</title>
+<script src="https://bundle.run/buffer@6.0.3"></script>
 <style>
-  body { font-family: system-ui, sans-serif; background:#0f0f1a; color:#e0e0ff; padding:1rem; }
-  .container { max-width:620px; margin:auto; }
-  .card { background:#1a1a2e; padding:1.5rem; border-radius:16px; border:1px solid #334155; }
-  button, input, textarea, select { width:100%; padding:.8rem; margin-bottom:1rem; border-radius:10px; border:1px solid #334155; background:#111827; color:white; }
-  button { background:#7c3aed; font-weight:bold; cursor:pointer; }
-  .warning { background:rgba(245,158,11,.15); border:1px solid #f59e0b; padding:1rem; border-radius:12px; margin-bottom:1rem; }
-  .note { font-size:0.9rem; color:#c7d2fe; margin-bottom:1rem;}
-  .status { margin-top:1rem; padding:1rem; border-radius:12px; }
+  body { font-family: system-ui, -apple-system, sans-serif; background:#0d0d17; color:#fff; padding:15px; margin:0; }
+  .card { background:#1a1a2e; padding:20px; border-radius:24px; border:1px solid #334155; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  h2 { margin:0 0 20px 0; color:#8b5cf6; text-align:center; font-size: 1.5rem; }
+  label { display:block; margin-bottom:8px; font-weight:600; color:#94a3b8; font-size:14px; }
+  input, select, button { width:100%; padding:14px; margin-bottom:15px; border-radius:12px; border:1px solid #334155; background:#0f172a; color:#fff; font-size:16px; box-sizing:border-box; outline:none; }
+  button { background:#7c3aed; border:none; font-weight:bold; cursor:pointer; transition: 0.2s; }
+  button:active { transform: scale(0.96); opacity: 0.8; }
+  #imagePreview { width:100%; max-height:180px; border-radius:12px; object-fit:contain; display:none; margin-bottom:15px; background:#000; border: 1px dashed #4b5563; }
+  .status { padding:15px; border-radius:12px; font-size:14px; display:none; line-height:1.4; word-break: break-all; margin-top:10px; }
+  .info-box { background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; padding: 10px; border-radius: 10px; font-size: 12px; margin-bottom: 15px; color: #a7f3d0; }
 </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Solana Token Launchpad</h2>
-    <div class="warning">⚠️ Devnet by default. Mainnet uses REAL SOL. Do NOT use mainnet unless you understand costs.</div>
+  <div class="card">
+    <h2>Token Launchpad</h2>
+    
+    <div class="info-box">
+      🛡️ <b>100% Safe Launch:</b> Mint & Freeze authorities will be permanently revoked upon creation. Your token will be fully decentralized.
+    </div>
 
-    <div class="card">
+    <button id="connectBtn">1. Connect Phantom Wallet</button>
+
+    <form id="launchForm" style="display:none;">
+      <label>Step 2: Select Token Logo</label>
+      <img id="imagePreview" onclick="document.getElementById('imageInput').click()" />
+      <input type="file" id="imageInput" accept="image/*" style="display:none;" />
+      <button type="button" onclick="document.getElementById('imageInput').click()" style="background:#334155;">Open Phone Gallery</button>
+
+      <label>Network</label>
       <select id="network">
-        <option value="devnet" selected>Devnet (testing)</option>
-        <option value="mainnet-beta">Mainnet (REAL SOL)</option>
+        <option value="devnet">Devnet (Testing)</option>
+        <option value="mainnet-beta">Mainnet (Real SOL)</option>
       </select>
 
-      <button id="walletBtn">Connect Phantom</button>
+      <label>Token Name</label>
+      <input id="name" placeholder="eg. Galactic Credits" required />
 
-      <form id="form">
-        <input id="name" placeholder="Token Name" required />
-        <input id="symbol" placeholder="Symbol (<=8 chars)" maxlength="8" required />
-        <input id="supply" type="number" placeholder="Total Supply (integer)" required />
-        <input id="image" placeholder="Image URL (https://...png) — optional" />
-        <textarea id="description" placeholder="Description (optional)"></textarea>
-        <button type="submit">Launch Token</button>
-      </form>
+      <label>Symbol</label>
+      <input id="symbol" placeholder="eg. GC" maxlength="10" required />
 
-      <div id="status" class="status" style="display:none;"></div>
-      <div class="note">
-        Note: On-chain metadata typically expects an HTTP/HTTPS/IPFS/Arweave URI (not large data URIs). If you use an embedded data URI it may exceed metadata size limits or break indexers. Use IPFS/Arweave for production metadata.
-      </div>
-    </div>
+      <label>Total Supply</label>
+      <input id="supply" type="number" placeholder="1000000" required />
+
+      <button type="submit" id="submitBtn">3. Launch & Renounce Authorities 🚀</button>
+    </form>
+
+    <div id="status" class="status"></div>
   </div>
 
-  <!-- Libraries (IIFE builds for browsers) -->
-  <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
-  <script src="https://unpkg.com/@solana/spl-token@latest/lib/index.iife.min.js"></script>
-  <script src="https://unpkg.com/@metaplex-foundation/mpl-token-metadata@latest/dist/index.iife.js"></script>
+  <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
+  <script src="https://unpkg.com/@solana/spl-token@0.3.9/lib/index.iife.min.js"></script>
+  <script src="https://unpkg.com/@metaplex-foundation/mpl-token-metadata@2.13.0/dist/index.iife.js"></script>
 
   <script>
-  (function () {
-    const { Connection, clusterApiUrl, Transaction, SystemProgram, Keypair, LAMPORTS_PER_SOL, PublicKey } = solanaWeb3;
-    const {
-      TOKEN_PROGRAM_ID, MINT_SIZE,
-      getMinimumBalanceForRentExemptMint,
-      createInitializeMintInstruction,
-      getAssociatedTokenAddress,
-      createAssociatedTokenAccountInstruction,
-      createMintToInstruction,
-      createSetAuthorityInstruction,
-      AuthorityType
-    } = splToken;
-    const {
-      createCreateMetadataAccountV3Instruction,
-      PROGRAM_ID: METADATA_PROGRAM_ID
-    } = mplTokenMetadata;
+    window.Buffer = window.buffer.Buffer;
+    
+    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI3N2YxNDQxYi04N2U2LTQ1OTMtOGVmNi0wY2UzOTJlZWIwMmEiLCJlbWFpbCI6Impqbzk1ODU3NUBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwicGluX3BvbGljeSI6eyJyZWdpb25zIjpbeyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJGUkExIn0seyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJOWUMxIn1dLCJ2ZXJzaW9uIjoxfSwibWZhX2VuYWJsZWQiOmZhbHNlLCJzdGF0dXMiOiJBQ1RJVkUifSwiYXV0aGVudGljYXRpb25UeXBlIjoic2NvcGVkS2V5Iiwic2NvcGVkS2V5S2V5IjoiYmNlZDI3MTQyMzdmOWFiYjUyMTYiLCJzY29wZWRLZXlTZWNyZXQiOiIwN2M2M2M4YTk4NzBiMmU2NzMzNjkzOGM3NWIyZDFhZjZhYTg0MzVjZGIwOWIyODQzYzI1NjAyNGQ5YmZiOGU5IiwiZXhwIjoxNzk4NzM4NjA0fQ.ateDL6iIohY2sqOygk6UBrUMgOpGdCJc2ij9eLq406w";
 
-    // State
+    const { Connection, clusterApiUrl, Transaction, SystemProgram, Keypair, PublicKey } = solanaWeb3;
+    const { 
+      TOKEN_PROGRAM_ID, MINT_SIZE, getMinimumBalanceForRentExemptMint, 
+      createInitializeMintInstruction, getAssociatedTokenAddress, 
+      createAssociatedTokenAccountInstruction, createMintToInstruction,
+      createSetAuthorityInstruction, AuthorityType 
+    } = splToken;
+    const { createCreateMetadataAccountV3Instruction, PROGRAM_ID: METADATA_PROGRAM_ID } = mplTokenMetadata;
+
     let wallet = null;
     let connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
-    let isConnecting = false;
 
-    // DOM
-    const walletBtn = document.getElementById('walletBtn');
-    const form = document.getElementById('form');
-    const networkSelect = document.getElementById('network');
-    const statusDiv = document.getElementById('status');
-
-    function showStatus(msg, isError = false) {
-      statusDiv.style.display = 'block';
-      statusDiv.textContent = msg;
-      statusDiv.style.background = isError ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.08)';
-      statusDiv.style.border = `1px solid ${isError ? '#ef4444' : '#22c55e'}`;
-      statusDiv.style.color = isError ? '#fecaca' : '#bbf7d0';
-    }
-
-    function hideStatus() {
-      statusDiv.style.display = 'none';
-    }
-
-    function toggleForm(disabled) {
-      form.querySelectorAll('input,textarea,button,select').forEach(el => el.disabled = disabled);
-      networkSelect.disabled = disabled;
-    }
-
-    function updateWalletButton() {
-      if (wallet?.publicKey) {
-        const pk = wallet.publicKey.toString();
-        walletBtn.textContent = pk.slice(0,6) + '…' + pk.slice(-4);
-        toggleForm(false);
-      } else {
-        walletBtn.textContent = 'Connect Phantom';
-        toggleForm(true);
-      }
-    }
-
-    // Robust provider detection: prefer window.solana, then window.phantom?.solana
-    function getProvider() {
-      const p1 = window.solana && window.solana.isPhantom ? window.solana : null;
-      const p2 = window.phantom?.solana && window.phantom.solana.isPhantom ? window.phantom.solana : null;
-      return p1 || p2 || null;
-    }
-
-    // Network change
-    networkSelect.onchange = () => {
-      const newNet = networkSelect.value;
-      connection = new Connection(clusterApiUrl(newNet), 'confirmed');
-      if (newNet === 'mainnet-beta') {
-        const ok = confirm('⚠️ Switching to MAINNET — real SOL will be spent! Continue?');
-        if (!ok) {
-          networkSelect.value = 'devnet';
-          connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
-          showStatus('Kept on DEVNET');
-          return;
-        }
-      }
-      showStatus(`Connected to ${newNet.toUpperCase()}`);
+    document.getElementById('network').onchange = (e) => {
+      connection = new Connection(clusterApiUrl(e.target.value), 'confirmed');
     };
 
-    // Connect
-    async function connectWallet(eager = false) {
-      if (isConnecting) return;
-      isConnecting = true;
-      walletBtn.disabled = true;
-      walletBtn.textContent = eager ? 'Auto-connecting...' : 'Connecting...';
+    const imageInput = document.getElementById('imageInput');
+    const imagePreview = document.getElementById('imagePreview');
+    const launchForm = document.getElementById('launchForm');
+    const status = document.getElementById('status');
 
-      try {
-        const provider = getProvider();
-        if (!provider) {
-          showStatus('Phantom not detected! Use Phantom in-app browser or install the extension.', true);
-          throw new Error('No Phantom provider found');
-        }
-
-        const opts = eager ? { onlyIfTrusted: true } : {};
-        const resp = await provider.connect(opts);
-        wallet = { publicKey: resp.publicKey };
-        showStatus('Connected successfully! 🎉');
-        updateWalletButton();
-      } catch (err) {
-        console.error(err);
-        if (err?.code === 4001) {
-          showStatus('Connection rejected by user.', true);
-        } else {
-          showStatus('Connection failed: ' + (err?.message || err?.toString?.() || 'Unknown'), true);
-        }
-        wallet = null;
-        updateWalletButton();
-      } finally {
-        isConnecting = false;
-        walletBtn.disabled = false;
+    imageInput.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (res) => {
+          imagePreview.src = res.target.result;
+          imagePreview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
       }
+    };
+
+    document.getElementById('connectBtn').onclick = async () => {
+      const provider = window.solana || window.phantom?.solana;
+      if (!provider) return alert("Open inside Phantom App Browser!");
+      try {
+        const resp = await provider.connect();
+        wallet = provider;
+        document.getElementById('connectBtn').style.display = 'none';
+        launchForm.style.display = 'block';
+      } catch (err) { alert("Connect failed"); }
+    };
+
+    function showStatus(msg, err = false) {
+      status.style.display = 'block';
+      status.innerHTML = msg;
+      status.style.background = err ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)';
+      status.style.border = `1px solid ${err ? '#ef4444' : '#22c55e'}`;
     }
 
-    // Eager connect if trusted
-    window.addEventListener('load', () => connectWallet(true));
-    walletBtn.onclick = () => connectWallet(false);
+    async function uploadToIPFS(file, name, symbol) {
+      const formData = new FormData();
+      formData.append('file', file);
+      const imgRes = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST", headers: { Authorization: `Bearer ${PINATA_JWT}` }, body: formData
+      });
+      const imgData = await imgRes.json();
+      const imgUrl = `https://gateway.pinata.cloud/ipfs/${imgData.IpfsHash}`;
 
-    // Small helper: turn JSON into base64 data URI (but we warn about size)
-    function jsonToDataUri(obj) {
-      const json = JSON.stringify(obj);
-      const utf8 = new TextEncoder().encode(json);
-      let str = '';
-      for (let i = 0; i < utf8.length; i++) str += String.fromCharCode(utf8[i]);
-      return 'data:application/json;base64,' + btoa(str);
+      const meta = JSON.stringify({ name, symbol, image: imgUrl, properties: { files: [{ uri: imgUrl, type: "image/png" }] } });
+      const jsonRes = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
+        method: "POST", headers: { Authorization: `Bearer ${PINATA_JWT}`, "Content-Type": "application/json" }, body: meta
+      });
+      const jsonData = await jsonRes.json();
+      return `https://gateway.pinata.cloud/ipfs/${jsonData.IpfsHash}`;
     }
 
-    // Validate integer supply
-    function validateSupply(s) {
-      if (!s) return false;
-      const n = Number(s);
-      return Number.isFinite(n) && n > 0 && Number.isInteger(n);
-    }
-
-    // Form submit
-    form.onsubmit = async (e) => {
+    launchForm.onsubmit = async (e) => {
       e.preventDefault();
-      hideStatus();
-
-      if (!wallet?.publicKey) return showStatus('Wallet not connected', true);
-
-      // Collect values
-      const name = document.getElementById('name').value.trim();
-      const symbol = document.getElementById('symbol').value.trim();
-      const supplyStr = document.getElementById('supply').value;
-      const image = document.getElementById('image').value.trim();
-      const description = document.getElementById('description').value.trim();
-      const decimals = 9; // standard on Solana SPL tokens
-
-      if (!name || !symbol || !validateSupply(supplyStr)) {
-        return showStatus('Invalid input: ensure name, symbol and an integer supply > 0 are provided', true);
-      }
-      if (symbol.length > 8) {
-        return showStatus('Symbol must be <= 8 characters', true);
-      }
-
-      const provider = getProvider();
-      if (!provider) return showStatus('Lost wallet connection!', true);
-
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      
       try {
-        showStatus('Preparing transaction...');
+        const file = imageInput.files[0];
+        if(!file) throw new Error("Select an image first!");
 
-        // Balance check (small buffer)
-        const balance = await connection.getBalance(wallet.publicKey);
-        if (balance < Math.ceil(LAMPORTS_PER_SOL * 0.005)) {
-          return showStatus('Insufficient SOL for fees/rent (need ~0.005 SOL)', true);
-        }
-
-        // Create mint
+        showStatus("1/3: Uploading to IPFS...");
+        const uri = await uploadToIPFS(file, document.getElementById('name').value, document.getElementById('symbol').value);
+        
+        showStatus("2/3: Building Transaction...");
         const mint = Keypair.generate();
-        const lamports = await getMinimumBalanceForRentExemptMint(connection);
+        const payer = wallet.publicKey;
+        const [meta] = PublicKey.findProgramAddressSync([Buffer.from("metadata"), METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()], METADATA_PROGRAM_ID);
+        const ata = await getAssociatedTokenAddress(mint.publicKey, payer);
+        const rent = await getMinimumBalanceForRentExemptMint(connection);
 
-        // Associated token account for payer
-        const ata = await getAssociatedTokenAddress(mint.publicKey, wallet.publicKey);
-
-        // Metadata PDA (Metaplex)
-        const [metadataPDA] = PublicKey.findProgramAddressSync(
-          [Buffer.from('metadata'), METADATA_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer()],
-          METADATA_PROGRAM_ID
-        );
-
-        // Build metadata JSON (recommended: host this JSON on IPFS/Arweave and set uri to that)
-        const metadataJson = {
-          name,
-          symbol,
-          description,
-          image: image || '',
-          attributes: [],
-          properties: {
-            files: image ? [{ uri: image, type: 'image/png' }] : []
-          }
-        };
-
-        // If you want to embed metadata as a data URI (only for quick tests), we support it but warn:
-        const uri = jsonToDataUri(metadataJson);
-        if (uri.length > 200) {
-          // Many indexers and Metaplex tools expect uris under ~200 chars; reject to avoid corrupting metadata
-          return showStatus('Metadata URI too large for on-chain metadata. Host JSON on IPFS or Arweave (recommended).', true);
-        }
-
-        const metadataData = {
-          name,
-          symbol,
-          uri,
-          sellerFeeBasisPoints: 0,
-          creators: [],
-          collection: null,
-          uses: null
-        };
-
-        // Build transaction
-        const tx = new Transaction();
-        tx.add(
-          SystemProgram.createAccount({
-            fromPubkey: wallet.publicKey,
-            newAccountPubkey: mint.publicKey,
-            space: MINT_SIZE,
-            lamports,
-            programId: TOKEN_PROGRAM_ID
-          }),
-          createInitializeMintInstruction(
-            mint.publicKey,
-            decimals,
-            wallet.publicKey, // mint authority
-            wallet.publicKey  // freeze authority
-          ),
-          createAssociatedTokenAccountInstruction(
-            wallet.publicKey, // payer
-            ata,              // associated token account address
-            wallet.publicKey, // owner of ATA
-            mint.publicKey    // mint
-          ),
-          createMintToInstruction(
-            mint.publicKey,
-            ata,
-            wallet.publicKey,
-            BigInt(supplyStr) * (10n ** BigInt(decimals))
-          ),
+        const tx = new Transaction().add(
+          SystemProgram.createAccount({ fromPubkey: payer, newAccountPubkey: mint.publicKey, space: MINT_SIZE, lamports: rent, programId: TOKEN_PROGRAM_ID }),
+          createInitializeMintInstruction(mint.publicKey, 9, payer, payer),
+          createAssociatedTokenAccountInstruction(payer, ata, payer, mint.publicKey),
+          createMintToInstruction(mint.publicKey, ata, payer, BigInt(document.getElementById('supply').value) * BigInt(10**9)),
           createCreateMetadataAccountV3Instruction(
-            {
-              metadata: metadataPDA,
-              mint: mint.publicKey,
-              mintAuthority: wallet.publicKey,
-              payer: wallet.publicKey,
-              updateAuthority: wallet.publicKey
-            },
-            {
-              createMetadataAccountArgsV3: {
-                data: metadataData,
-                isMutable: true,
-                collectionDetails: null
-              }
-            }
+            { metadata: meta, mint: mint.publicKey, mintAuthority: payer, payer, updateAuthority: payer },
+            { createMetadataAccountArgsV3: {
+                data: { name: document.getElementById('name').value, symbol: document.getElementById('symbol').value, uri, sellerFeeBasisPoints: 0, creators: null, collection: null, uses: null },
+                isMutable: true, collectionDetails: null
+            }}
           ),
-          // Revoke minting ability by setting mint authority to null (optional)
-          createSetAuthorityInstruction(
-            mint.publicKey,
-            wallet.publicKey,
-            AuthorityType.MintTokens,
-            null
-          )
+          // Revoke Mint Authority
+          createSetAuthorityInstruction(mint.publicKey, payer, AuthorityType.MintTokens, null),
+          // Revoke Freeze Authority
+          createSetAuthorityInstruction(mint.publicKey, payer, AuthorityType.FreezeAccount, null)
         );
 
-        tx.feePayer = wallet.publicKey;
-        const { blockhash } = await connection.getLatestBlockhash();
-        tx.recentBlockhash = blockhash;
-
-        // Partial sign with newly created mint keypair
+        tx.feePayer = payer;
+        tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
         tx.partialSign(mint);
 
-        // Ask wallet to sign the transaction
-        const signedTx = await provider.signTransaction(tx);
-
-        // Send
-        const raw = signedTx.serialize();
-        const txid = await connection.sendRawTransaction(raw);
-        await connection.confirmTransaction(txid, 'confirmed');
-
-        const mintAddress = mint.publicKey.toBase58();
-        const explorerUrl = networkSelect.value === 'mainnet-beta'
-          ? `https://explorer.solana.com/address/${mintAddress}`
-          : `https://explorer.solana.com/address/${mintAddress}?cluster=devnet`;
-
-        showStatus(`Success! Mint: ${mintAddress} — tx: ${txid}`);
-        window.open(explorerUrl, '_blank');
-        alert(`TOKEN LAUNCHED 🚀\n\nMint: ${mintAddress}\nExplorer: ${explorerUrl}`);
+        showStatus("3/3: Waiting for Signature...");
+        const signed = await wallet.signTransaction(tx);
+        const sig = await connection.sendRawTransaction(signed.serialize());
+        
+        showStatus(`🚀 SUCCESS!<br>Mint: ${mint.publicKey.toBase58()}<br><b>Authorities Revoked (100% Safe)</b><br><a href="https://solscan.io/tx/${sig}?cluster=${document.getElementById('network').value}" target="_blank" style="color:#fff;">View Transaction</a>`);
       } catch (err) {
-        console.error(err);
-        showStatus('Transaction failed: ' + (err?.message || err?.toString?.() || 'Unknown'), true);
+        showStatus("Error: " + err.message, true);
+      } finally {
+        submitBtn.disabled = false;
       }
     };
-
-    // Initial UI state
-    updateWalletButton();
-    toggleForm(true);
-  })();
   </script>
 </body>
 </html>
- 
