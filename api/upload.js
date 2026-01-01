@@ -18,6 +18,7 @@ export default upload.single("file")(async (req, res) => {
       headers: { Authorization: `Bearer ${process.env.PINATA_JWT}` },
       body: img,
     });
+
     const imgData = await imgRes.json();
     const imageUrl = `https://gateway.pinata.cloud/ipfs/${imgData.IpfsHash}`;
 
@@ -31,8 +32,8 @@ export default upload.single("file")(async (req, res) => {
       },
       body: JSON.stringify(meta),
     });
-    const metaData = await metaRes.json();
 
+    const metaData = await metaRes.json();
     res.status(200).json({ uri: `https://gateway.pinata.cloud/ipfs/${metaData.IpfsHash}` });
   } catch (err) {
     console.error(err);
