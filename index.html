@@ -82,7 +82,7 @@ connectBtn.onclick = async () => {
   try {
     const res = await window.solana.connect();
     localStorage.setItem("connected", "true");
-    updateUI(res.publicKey);
+    await updateUI(res.publicKey);
   } catch {
     info.innerText = "CONNECTION REJECTED";
   }
