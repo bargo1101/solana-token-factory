@@ -255,53 +255,100 @@ function attachProviderListeners(){
 
   provider.on("disconnect", () => {
     onDisconnect();
-  });
-}
+<script>
+async function createTokenUserPays(name, symbol, supply) {
+  if (!publicKey) return alert("Connect your wallet first");
+  
+  try {
+    const provider = window.solana;
+    if (!provider || !provider.isPhantom) throw new Error("Phantom not found");
 
-// Initialize Phantom UI state on page load
-window.addEventListener("load", () => {
-  updatePhantomButton();
-  attachProviderListeners();
+    // Connect again if needed
+    if (!provider.isConnected) await provider.connect();
 
-  // If the Phantom extension is already connected and trusted, pick up its publicKey
-  const provider = getPhantomProvider();
-  if(provider && provider.isConnected && provider.publicKey){
-    publicKey = new PublicKey(provider.publicKey.toString());
-    onConnect();
+    const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl("mainnet-beta"), "confirmed");
+    
+    // Generate a new keypair for the mint
+    const mint = solanaWeb3.Keypair.generate();
+
+    // Create transaction to create mint
+    const tx = new solanaWeb3.Transaction();
+
+    const { createMintInstruction, getOrCreateAssociatedTokenAccount } = splToken;
+
+    // 1. Add instruction to create mint
+    tx.add(
+      splToken.createMintInstruction(
+        mint.publicKey,        // new mint pubkey
+        9,                     // decimals
+        publicKey,             // mint authority = user
+        publicKey,             // freeze authority = user
+        splToken.TOKEN_PROGRAM_ID
+      )
+    );
+
+    // 2. Get/create associated token account
+    const tokenAccount = await splToken.getOrCreateAssociatedTokenAccount(
+      connection,
+      null,               // payer will sign via Phantom
+      mint.publicKey,
+      publicKey
+    );
+
+    // 3. Mint tokens to the user's token account
+    tx.add(
+      splToken.mintToInstruction(
+        mint.publicKey,
+        tokenAccount.address,
+        publicKey,
+        Number(supply) * 10 ** 9,  // adjust for decimals
+        [],
+        splToken.TOKEN_PROGRAM_ID
+      )
+    );
+
+    // 4. Revoke mint & freeze authority so mint is locked
+    tx.add(
+      splToken.setAuthorityInstruction(
+        mint.publicKey,
+        publicKey,
+        splToken.AuthorityType.MintTokens,
+        null
+      ),
+      splToken.setAuthorityInstruction(
+        mint.publicKey,
+        publicKey,
+        splToken.AuthorityType.FreezeAccount,
+        null
+      )
+    );
+
+    // Send transaction via Phantom
+    const { signature } = await provider.signAndSendTransaction(tx);
+    await connection.confirmTransaction(signature, "confirmed");
+
+    alert("Token minted: " + mint.publicKey.toBase58());
+    addToken(mint.publicKey.toBase58());
+
+    // Update balance
+    updateBalance();
+
+  } catch (err) {
+    console.error("Mint failed:", err);
+    alert("Mint failed: " + (err?.message || err));
   }
-});
-
-/* --- Form submission logic (unchanged) --- */
-document.getElementById("launchForm").onsubmit=async e=>{
-  e.preventDefault();
-  const btn=document.getElementById("createBtn");
-  btn.disabled=true;
-  btn.textContent="Creating...";
-  const payload={
-    name: name.value,
-    symbol: symbol.value,
-    supply: supply.value,
-    creator: publicKey ? publicKey.toBase58() : null
-  };
-  try{
-    const res=await fetch("/api/create-token",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify(payload)
-    });
-    const data=await res.json();
-    addToken(data.mint);
-  }catch(err){ alert("Creation failed"); }
-  btn.textContent="Create Token";
-  btn.disabled=false;
-};
-
-function addToken(mint){
-  const div=document.createElement("div");
-  div.className="token";
-  div.textContent="Token Created: "+mint;
-  document.getElementById("tokens").prepend(div);
 }
-</script>
+
+// Replace your form submit
+document.getElementById("launchForm").onsubmit = async e => {
+  e.preventDefault();
+  const btn = document.getElementById("createBtn");
+  btn.disabled = true;
+  btn.textContent = "Creating...";
+  await createTokenUserPays(name.value, symbol.value, supply.value);
+  btn.textContent = "Create Token";
+  btn.disabled = false;
+};
+  </script>
 </body>
 </html>
