@@ -80,6 +80,17 @@ button{
 }
 button:disabled{opacity:.5;cursor:not-allowed}
 
+#phantomBtn{
+  padding:10px 16px;
+  font-size:1rem;
+  margin-left:12px;
+  border-radius:12px;
+  background:linear-gradient(90deg,#06b6d4,#7c3aed);
+  color:#fff;
+  border:none;
+  cursor:pointer;
+}
+
 .tokens{
   margin-top:32px;
 }
@@ -117,6 +128,7 @@ footer{
 
   <div style="margin:24px 0;text-align:center">
     <div class="wallet-adapter-button-container"></div>
+    <button id="phantomBtn" type="button">Connect Phantom Wallet</button>
   </div>
 
   <form id="launchForm">
@@ -148,26 +160,119 @@ window.addEventListener("wallet-adapter-ready-state-change",e=>{
 });
 
 async function onConnect(){
+  if(!publicKey) return;
   const addr=publicKey.toBase58();
   document.getElementById("status").textContent=
     "CONNECTED TO "+addr.slice(0,6)+"..."+addr.slice(-6);
   document.getElementById("createBtn").disabled=false;
   updateBalance();
+  if(poller) clearInterval(poller);
   poller=setInterval(updateBalance,10000);
+  updatePhantomButton();
 }
 function onDisconnect(){
   publicKey=null;
   document.getElementById("status").textContent="NOT CONNECTED";
   document.getElementById("balance").textContent="Balance: — SOL";
   document.getElementById("createBtn").disabled=true;
-  clearInterval(poller);
+  if(poller) clearInterval(poller);
+  updatePhantomButton();
 }
 async function updateBalance(){
-  const bal=await connection.getBalance(publicKey);
-  document.getElementById("balance").textContent=
-    "Balance: "+(bal/LAMPORTS_PER_SOL).toFixed(4)+" SOL";
+  if(!publicKey) return;
+  try{
+    const bal=await connection.getBalance(publicKey);
+    document.getElementById("balance").textContent=
+      "Balance: "+(bal/LAMPORTS_PER_SOL).toFixed(4)+" SOL";
+  }catch(err){
+    console.error("Failed to fetch balance", err);
+  }
 }
 
+/* --- Phantom integration --- */
+const phantomBtn = document.getElementById("phantomBtn");
+
+function getPhantomProvider(){
+  if("solana" in window){
+    const provider = window.solana;
+    if(provider && provider.isPhantom) return provider;
+  }
+  return null;
+}
+
+function updatePhantomButton(){
+  const provider = getPhantomProvider();
+  if(!provider){
+    phantomBtn.textContent = "Install Phantom";
+    phantomBtn.onclick = () => window.open("https://phantom.app/", "_blank");
+    phantomBtn.disabled = false;
+    return;
+  }
+
+  // provider exists
+  if(provider.isConnected){
+    phantomBtn.textContent = "Disconnect Phantom";
+  } else {
+    phantomBtn.textContent = "Connect Phantom";
+  }
+
+  phantomBtn.onclick = async () => {
+    try{
+      if(provider.isConnected){
+        await provider.disconnect();
+        // provider will emit 'disconnect' event handled below
+      }else{
+        const res = await provider.connect();
+        // res.publicKey is a PublicKey-like object; set our publicKey
+        publicKey = new PublicKey(res.publicKey.toString());
+        onConnect();
+      }
+    }catch(err){
+      console.error("Phantom connection error", err);
+      alert("Wallet connection failed: " + (err?.message || err));
+    }
+  };
+}
+
+// Attach provider events if available
+function attachProviderListeners(){
+  const provider = getPhantomProvider();
+  if(!provider) return;
+
+  // avoid attaching multiple times
+  try{
+    provider.removeAllListeners?.("connect");
+    provider.removeAllListeners?.("disconnect");
+  }catch(e){ /* ignore if not supported */ }
+
+  provider.on("connect", (pk) => {
+    try{
+      publicKey = new PublicKey(pk.toString());
+    }catch(e){
+      publicKey = pk && pk.toString ? new PublicKey(pk.toString()) : null;
+    }
+    onConnect();
+  });
+
+  provider.on("disconnect", () => {
+    onDisconnect();
+  });
+}
+
+// Initialize Phantom UI state on page load
+window.addEventListener("load", () => {
+  updatePhantomButton();
+  attachProviderListeners();
+
+  // If the Phantom extension is already connected and trusted, pick up its publicKey
+  const provider = getPhantomProvider();
+  if(provider && provider.isConnected && provider.publicKey){
+    publicKey = new PublicKey(provider.publicKey.toString());
+    onConnect();
+  }
+});
+
+/* --- Form submission logic (unchanged) --- */
 document.getElementById("launchForm").onsubmit=async e=>{
   e.preventDefault();
   const btn=document.getElementById("createBtn");
@@ -177,7 +282,7 @@ document.getElementById("launchForm").onsubmit=async e=>{
     name: name.value,
     symbol: symbol.value,
     supply: supply.value,
-    creator: publicKey.toBase58()
+    creator: publicKey ? publicKey.toBase58() : null
   };
   try{
     const res=await fetch("/api/create-token",{
