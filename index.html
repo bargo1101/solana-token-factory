@@ -1,287 +1,286 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>MC Launchpad — Solana Token Creator (2026 fix)</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VOID LAUNCH — memecoin crematorium 2026</title>
+<meta name="description" content="Create. Pump. Burn. Repeat. No backend. No mercy."/>
 
-<!-- Updated versions - best chance in early 2026 -->
 <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
 <script src="https://unpkg.com/@solana/spl-token@0.4.8/lib/index.iife.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
 
 <style>
-  *{box-sizing:border-box;font-family:system-ui,-apple-system,sans-serif}
-  body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#1a0033,#06000f);color:#e9ddff}
-  .frame{position:fixed;inset:10px;border:3px solid #7c3aed;border-radius:24px;box-shadow:0 0 40px rgba(124,58,237,.6);pointer-events:none}
-  header{text-align:center;padding:40px 20px}
-  header h1{font-size:3.6rem;background:linear-gradient(90deg,#a78bfa,#c084fc);-webkit-background-clip:text;color:transparent}
-  .container{max-width:720px;margin:0 auto;background:rgba(15,5,40,.85);border-radius:24px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
-  .status{font-size:1.4rem;font-weight:700;text-align:center}
-  .balance{text-align:center;font-size:1.1rem;color:#a78bfa;margin:8px 0 18px}
-  form{display:grid;gap:12px}
-  input,select{padding:12px;border-radius:10px;border:1px solid #5b21b6;background:#0b0220;color:#fff;font-size:1rem}
-  button{padding:14px;font-size:1.05rem;font-weight:700;border:none;border-radius:12px;cursor:pointer;background:linear-gradient(90deg,#7c3aed,#a78bfa);color:#fff}
-  button:disabled{opacity:.5;cursor:not-allowed}
-  #phantomBtn{padding:10px 16px;font-size:1rem;margin-left:12px;border-radius:12px;background:linear-gradient(90deg,#06b6d4,#7c3aed);color:#fff;border:none;cursor:pointer}
-  .tokens{margin-top:22px}
-  .token{background:rgba(90,0,200,.12);padding:10px;border-radius:10px;margin-bottom:8px;font-size:.95rem;word-break:break-all}
+  :root{--bg:#000;--accent:#ff00aa;--text:#f0f;--dim:#666;--glass:rgba(10,0,20,0.7)}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    min-height:100vh;
+    background:radial-gradient(circle at 30% 20%,#1a0033,#000);
+    color:var(--text);
+    font-family:system-ui,sans-serif;
+    overflow-x:hidden;
+  }
+  .frame{
+    position:fixed;inset:0;pointer-events:none;
+    border:2px solid var(--accent);opacity:0.15;
+    animation:pulse 8s infinite alternate;
+  }
+  @keyframes pulse{0%,100%{opacity:0.12}50%{opacity:0.35}}
+  header{
+    text-align:center;padding:3rem 1rem;
+    background:linear-gradient(to bottom,rgba(255,0,170,0.1),transparent);
+  }
+  h1{
+    font-size:3.8rem;
+    background:linear-gradient(90deg,var(--accent),#00ffff,#ff00aa);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    text-shadow:0 0 30px rgba(255,0,170,0.6);
+  }
+  .container{
+    max-width:640px;margin:0 auto;padding:2rem;
+    background:var(--glass);
+    backdrop-filter:blur(16px);
+    border-radius:24px;
+    border:1px solid rgba(255,0,170,0.3);
+    box-shadow:0 0 60px rgba(255,0,170,0.2);
+  }
+  .status{
+    text-align:center;font-size:1.4rem;font-weight:900;margin:1rem 0;
+    letter-spacing:2px;text-transform:uppercase;
+  }
+  form{
+    display:grid;gap:1.2rem;margin:2rem 0;
+  }
+  input,textarea{
+    padding:1rem;
+    border-radius:12px;
+    border:1px solid var(--accent);
+    background:rgba(0,0,0,0.6);
+    color:#fff;
+    font-size:1.1rem;
+  }
+  input::placeholder{opacity:0.5;color:var(--accent)}
+  button{
+    padding:1.2rem;
+    font-size:1.3rem;font-weight:900;
+    border:none;border-radius:16px;
+    background:linear-gradient(45deg,#ff00aa,#00ffff);
+    color:#000;
+    cursor:pointer;transition:all .3s;
+    text-transform:uppercase;letter-spacing:2px;
+  }
+  button:hover{transform:scale(1.04);box-shadow:0 0 40px #ff00aa}
+  button:disabled{opacity:0.4;transform:none;cursor:not-allowed}
+  .preview{
+    margin:2rem 0;padding:1.5rem;
+    background:rgba(255,0,170,0.1);
+    border-radius:16px;
+    text-align:center;
+    min-height:120px;
+    border:1px dashed var(--accent);
+  }
+  .success{
+    margin-top:2rem;padding:1.5rem;
+    background:rgba(0,255,170,0.15);
+    border:2px solid #00ffaa;
+    border-radius:16px;
+    word-break:break-all;
+    font-family:monospace;
+  }
 </style>
 </head>
 <body>
+
 <div class="frame"></div>
 
 <header>
-  <h1>MC Launchpad</h1>
-  <p>Create Solana tokens • mainnet • 2026 fixed</p>
+  <h1>VOID LAUNCH</h1>
+  <p style="margin-top:0.5rem;opacity:0.7;font-size:1.2rem">
+    Create → Mint → Revoke → Disappear
+  </p>
 </header>
 
 <div class="container">
-  <div class="status" id="status">NOT CONNECTED</div>
-  <div class="balance" id="balance">Balance: — SOL</div>
+  <div class="status" id="status">DISCONNECTED • FEED THE VOID</div>
 
-  <div style="margin:18px 0;text-align:center">
-    <button id="phantomBtn" type="button">Connect Phantom</button>
-    <small style="display:block;margin-top:8px;opacity:0.7">Real SOL will be spent. Mint & freeze authority will be revoked.</small>
+  <div style="text-align:center;margin:1.5rem 0;">
+    <button id="connect">AWAKEN WALLET</button>
   </div>
 
-  <form id="launchForm">
-    <input id="name" placeholder="Token Name" required />
-    <input id="symbol" placeholder="Symbol (max 8 chars)" maxlength="8" required />
-    <input id="supply" type="number" min="1" placeholder="Total Supply (whole tokens)" required />
+  <form id="launch">
+    <input id="name" placeholder="Token Name (the lie)" required/>
+    <input id="symbol" placeholder="Symbol (max 8 chars)" maxlength="8" required/>
+    <input id="supply" type="number" min="1" placeholder="Total Supply (the illusion)" required/>
     <select id="decimals">
-      <option value="9" selected>Decimals: 9 (recommended)</option>
-      <option value="6">Decimals: 6</option>
-      <option value="0">Decimals: 0</option>
+      <option value="6">6 decimals (normie)</option>
+      <option value="9" selected>9 decimals (degen classic)</option>
+      <option value="0">0 decimals (pure chaos)</option>
     </select>
-    <button id="createBtn" disabled>Create Token</button>
+    <textarea id="desc" rows="3" placeholder="Description... (optional funeral note)"></textarea>
+    
+    <button id="create" disabled type="submit">BIRTH THE ABOMINATION</button>
   </form>
 
-  <div class="tokens" id="tokens"></div>
+  <div class="preview" id="preview">
+    Token will be born fair-launched • Mint & Freeze revoked • No going back
+  </div>
+
+  <div id="result" class="success" style="display:none"></div>
 </div>
 
 <script>
-// ──────────────────────────────────────────────────────────────
-// 2026 FIXED VERSION - using @solana/spl-token@0.4.8 compatible API
-// ──────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+// VOID LAUNCH — single-file mainnet memecoin generator — 2026 edition
+// ═════════════════════════════════════════════════════════════════
 
-const { Connection, clusterApiUrl, PublicKey, Keypair, Transaction, SystemProgram } = solanaWeb3;
-const connection = new Connection(clusterApiUrl("mainnet-beta"), "confirmed");
+const { Connection, PublicKey, Keypair, Transaction, SystemProgram } = solanaWeb3;
+const { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } = splToken;
 
-const TOKEN_PROGRAM_ID = splToken.TOKEN_PROGRAM_ID;
-const ASSOCIATED_TOKEN_PROGRAM_ID = splToken.ASSOCIATED_TOKEN_PROGRAM_ID;
-const MINT_SIZE = 82; // hardcoded - most reliable in 2026
+const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+const MINT_SIZE = 82;
 
-let walletPublicKey = null;
+let wallet = null;
 let provider = null;
 
-const statusEl = document.getElementById("status");
-const balanceEl = document.getElementById("balance");
-const createBtn = document.getElementById("createBtn");
-const tokensList = document.getElementById("tokens");
-const phantomBtn = document.getElementById("phantomBtn");
+const status = document.getElementById("status");
+const connectBtn = document.getElementById("connect");
+const createBtn = document.getElementById("create");
+const form = document.getElementById("launch");
+const resultDiv = document.getElementById("result");
 
-// ─── Phantom detection & connection ─────────────────────────────
-function getProvider() {
-  if (window?.solana?.isPhantom) return window.solana;
-  return null;
-}
-
-async function connectWallet() {
-  provider = getProvider();
-  if (!provider) {
-    phantomBtn.textContent = "Install Phantom";
-    phantomBtn.onclick = () => window.open("https://phantom.app/", "_blank");
+async function connect() {
+  if (!window.solana || !window.solana.isPhantom) {
+    alert("Phantom not detected. Install it or perish.");
     return;
   }
-
+  provider = window.solana;
   try {
-    if (provider.isConnected) {
-      await provider.disconnect();
-    }
     await provider.connect();
-  } catch (err) {
-    console.error(err);
-    alert("Connection failed: " + (err.message || err));
+    wallet = new PublicKey(provider.publicKey.toString());
+    status.textContent = `CONNECTED • \( {wallet.toBase58().slice(0,6)}... \){wallet.toBase58().slice(-6)}`;
+    createBtn.disabled = false;
+    connectBtn.textContent = "RECONNECT";
+  } catch(e) {
+    status.textContent = "REJECTION • VOID DENIED ACCESS";
   }
 }
 
-provider?.on("connect", (pubkey) => {
-  walletPublicKey = new PublicKey(pubkey.toString());
-  statusEl.textContent = "CONNECTED TO " + pubkey.toString().slice(0,6) + "..." + pubkey.toString().slice(-6);
-  createBtn.disabled = false;
-  updateBalance();
-});
+connectBtn.onclick = connect;
 
-provider?.on("disconnect", () => {
-  walletPublicKey = null;
-  statusEl.textContent = "NOT CONNECTED";
-  balanceEl.textContent = "Balance: — SOL";
-  createBtn.disabled = true;
-});
+async function createToken(e) {
+  e.preventDefault();
+  if (!wallet || !provider) return alert("No wallet. No birth.");
 
-phantomBtn.onclick = connectWallet;
+  const name = document.getElementById("name").value.trim() || "VOID";
+  const symbol = document.getElementById("symbol").value.trim() || "NULL";
+  const supplyStr = document.getElementById("supply").value;
+  const decimals = Number(document.getElementById("decimals").value);
 
-// ─── Balance poller ─────────────────────────────────────────────
-async function updateBalance() {
-  if (!walletPublicKey) return;
-  try {
-    const lamports = await connection.getBalance(walletPublicKey);
-    balanceEl.textContent = `Balance: ${(lamports / 1e9).toFixed(5)} SOL`;
-  } catch {}
-}
-setInterval(updateBalance, 12000);
-
-// ─── Core token creation logic ──────────────────────────────────
-async function createToken() {
-  if (!walletPublicKey || !provider) return alert("Wallet not connected");
-
-  const name = document.getElementById("name").value.trim();
-  const symbol = document.getElementById("symbol").value.trim();
-  const supplyInput = document.getElementById("supply").value.trim();
-  const decimals = parseInt(document.getElementById("decimals").value);
-
-  if (!name || !symbol || !supplyInput) return alert("Fill all fields");
-  if (isNaN(decimals) || decimals < 0 || decimals > 9) return alert("Invalid decimals");
-
-  const totalSupply = BigInt(supplyInput);
-  if (totalSupply <= 0n) return alert("Supply must be > 0");
+  if (!supplyStr || isNaN(Number(supplyStr))) return alert("Supply is required");
+  const totalSupply = BigInt(supplyStr);
+  if (totalSupply <= 0n) return alert("Supply must be positive. Even void has standards.");
 
   createBtn.disabled = true;
-  createBtn.textContent = "Creating... (wait 10-30s)";
+  createBtn.textContent = "BIRTHING... (30–90s)";
 
   try {
     const mint = Keypair.generate();
+    const rent = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
 
-    const rentExempt = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
+    const tx = new Transaction();
 
-    const tx = new Transaction({ feePayer: walletPublicKey });
-
-    // Create mint account
     tx.add(
       SystemProgram.createAccount({
-        fromPubkey: walletPublicKey,
+        fromPubkey: wallet,
         newAccountPubkey: mint.publicKey,
+        lamports: rent,
         space: MINT_SIZE,
-        lamports: rentExempt,
-        programId: TOKEN_PROGRAM_ID,
+        programId: TOKEN_PROGRAM_ID
       })
     );
 
-    // Initialize mint (authority = wallet)
     tx.add(
       splToken.createInitializeMintInstruction(
         mint.publicKey,
         decimals,
-        walletPublicKey,      // mint authority
-        walletPublicKey,      // freeze authority (will be revoked later)
+        wallet,
+        wallet,
         TOKEN_PROGRAM_ID
       )
     );
 
-    // Get / create associated token account
     const ata = await splToken.getAssociatedTokenAddress(
-      mint.publicKey,
-      walletPublicKey,
-      false,
-      TOKEN_PROGRAM_ID,
-      ASSOCIATED_TOKEN_PROGRAM_ID
+      mint.publicKey, wallet, false,
+      TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
-    const ataExists = await connection.getAccountInfo(ata);
-    if (!ataExists) {
+    const ataInfo = await connection.getAccountInfo(ata);
+    if (!ataInfo) {
       tx.add(
         splToken.createAssociatedTokenAccountInstruction(
-          walletPublicKey, // payer
-          ata,
-          walletPublicKey, // owner
-          mint.publicKey,
-          TOKEN_PROGRAM_ID,
-          ASSOCIATED_TOKEN_PROGRAM_ID
+          wallet, ata, wallet, mint.publicKey,
+          TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
         )
       );
     }
 
-    // Mint all tokens
     const mintAmount = totalSupply * (10n ** BigInt(decimals));
     tx.add(
       splToken.createMintToInstruction(
-        mint.publicKey,
-        ata,
-        walletPublicKey,
-        mintAmount,
-        [],
-        TOKEN_PROGRAM_ID
+        mint.publicKey, ata, wallet, mintAmount,
+        [], TOKEN_PROGRAM_ID
       )
     );
 
-    // ── Lock forever (revoke authorities) ───────────────────────
+    // Revoke both authorities (true fair launch)
     tx.add(
       splToken.createSetAuthorityInstruction(
-        mint.publicKey,
-        walletPublicKey,
-        0, // MintTokens
-        null,
-        TOKEN_PROGRAM_ID
+        mint.publicKey, wallet, 0, null, TOKEN_PROGRAM_ID
       )
     );
     tx.add(
       splToken.createSetAuthorityInstruction(
-        mint.publicKey,
-        walletPublicKey,
-        1, // FreezeAccount
-        null,
-        TOKEN_PROGRAM_ID
+        mint.publicKey, wallet, 1, null, TOKEN_PROGRAM_ID
       )
     );
 
-    // Get latest blockhash
     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+    tx.feePayer = wallet;
 
-    // Partial sign with mint keypair
     tx.partialSign(mint);
 
-    // Let wallet sign (Phantom)
-    const signedTx = await provider.signTransaction(tx);
-
-    // Send & confirm
-    const signature = await connection.sendRawTransaction(signedTx.serialize(), {
-      skipPreflight: false,
-      maxRetries: 3
+    const signed = await provider.signTransaction(tx);
+    const sig = await connection.sendRawTransaction(signed.serialize(), {
+      skipPreflight: true,
+      maxRetries: 5
     });
 
-    await connection.confirmTransaction(signature, "confirmed");
+    await connection.confirmTransaction(sig, "confirmed");
 
-    // Success
-    const mintAddr = mint.publicKey.toBase58();
-    const el = document.createElement("div");
-    el.className = "token";
-    el.textContent = `Success → Mint: \( {mintAddr.slice(0,8)}... \){mintAddr.slice(-8)}`;
-    tokensList.prepend(el);
+    const mintStr = mint.publicKey.toBase58();
+    resultDiv.innerHTML = `
+      ABOMINATION BORN<br><br>
+      Mint: <a href="https://solscan.io/token/\( {mintStr}" target="_blank"> \){mintStr}</a><br>
+      Signature: <a href="https://solscan.io/tx/\( {sig}" target="_blank"> \){sig}</a><br><br>
+      Authorities revoked. Liquidity? Your problem now.
+    `;
+    resultDiv.style.display = "block";
 
-    alert(`Token created!\nMint: ${mintAddr}\nTx: ${signature}\nAuthorities revoked (permanent)`);
-
-  } catch (e) {
+  } catch(e) {
     console.error(e);
-    alert("Failed: " + (e.message || String(e)).slice(0,180));
+    alert("BIRTH FAILED:\n" + (e.message || e).slice(0,200));
   } finally {
     createBtn.disabled = false;
-    createBtn.textContent = "Create Token";
+    createBtn.textContent = "BIRTH THE ABOMINATION";
   }
 }
 
-// ─── Event listeners ────────────────────────────────────────────
-document.getElementById("launchForm").addEventListener("submit", async e => {
-  e.preventDefault();
-  await createToken();
-});
+form.onsubmit = createToken;
 
-// Auto-detect if already connected
-if (getProvider()?.isConnected) {
-  walletPublicKey = new PublicKey(getProvider().publicKey.toString());
-  statusEl.textContent = "CONNECTED TO " + walletPublicKey.toBase58().slice(0,6)+"..."+walletPublicKey.toBase58().slice(-6);
-  createBtn.disabled = false;
-  updateBalance();
-}
+// Auto-reconnect if already approved
+if (window.solana?.isConnected) connect();
 </script>
 </body>
 </html>
