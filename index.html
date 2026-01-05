@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>VOID LAUNCH — memecoin crematorium 2026</title>
+  <title>VOID LAUNCH — Phantom Mobile Ready</title>
 
   <!-- Solana web3 and spl-token (IIFE builds) -->
   <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
@@ -18,38 +18,53 @@
       color:var(--text);font-family:'Courier New',monospace;display:flex;flex-direction:column;
       align-items:center;padding:2rem;
     }
-    .container{width:100%;max-width:500px;background:var(--glass);border:1px solid var(--accent);
-      padding:2rem;border-radius:15px;box-shadow:0 0 30px rgba(255,0,170,0.3);}
-    h1{text-align:center;margin-bottom:1.5rem;letter-spacing:4px;text-shadow:0 0 10px var(--accent);}
-    .status-bar{background:rgba(0,0,0,0.5);padding:10px;margin-bottom:20px;text-align:center;font-size:0.9rem;
-      border-bottom:1px solid var(--accent);color:#0ff;}
-    input,select{width:100%;padding:12px;margin:8px 0;background:#111;border:1px solid #444;color:#fff;border-radius:5px;outline:none;}
+    .container{width:100%;max-width:680px;background:var(--glass);border:1px solid var(--accent);
+      padding:1.5rem;border-radius:12px;box-shadow:0 0 30px rgba(255,0,170,0.18);}
+    h1{text-align:center;margin-bottom:1rem;letter-spacing:4px;text-shadow:0 0 10px var(--accent);}
+    .status-bar{background:rgba(0,0,0,0.5);padding:10px;margin-bottom:12px;text-align:center;font-size:0.9rem;border-bottom:1px solid var(--accent);color:#0ff;}
+    input,select{width:100%;padding:10px;margin:6px 0;background:#111;border:1px solid #444;color:#fff;border-radius:6px;outline:none;}
     input:focus{border-color:var(--accent);}
-    button{width:100%;padding:15px;margin-top:15px;background:var(--accent);color:#000;font-weight:bold;border:none;cursor:pointer;text-transform:uppercase;}
-    button:hover{filter:brightness(1.2);} button:disabled{background:#333;color:#666;cursor:not-allowed;}
-    .log-box{margin-top:20px;padding:10px;font-size:0.75rem;background:#000;border:1px dashed var(--accent);word-break:break-all;display:none;}
-    a{color:#0ff;}
+    button{padding:10px 14px;margin:6px 0;background:var(--accent);color:#000;font-weight:bold;border:none;cursor:pointer;text-transform:uppercase;border-radius:6px;}
+    .row{display:flex;gap:8px}
+    .row > *{flex:1}
+    .small{padding:8px 10px;background:#222;border:1px solid #333;color:#ddd;border-radius:6px}
+    .log-box{margin-top:12px;padding:10px;font-size:0.85rem;background:#000;border:1px dashed var(--accent);word-break:break-all;max-height:240px;overflow:auto;}
+    a{color:#0ff}
     .warning{color:#ff77aa;font-size:0.9rem;margin-top:0.5rem}
+    .muted{color:#9a79a6;font-size:0.85rem}
   </style>
 </head>
 <body>
   <div class="container">
     <h1>VOID LAUNCH</h1>
-    <div class="status-bar" id="status">INITIALIZING SYSTEMS...</div>
+    <div id="status" class="status-bar">INITIALIZING...</div>
 
-    <button id="connectBtn">CONNECT PHANTOM</button>
+    <div id="controls" style="display:block;">
+      <div class="row">
+        <button id="connectBtn">CONNECT PHANTOM</button>
+        <button id="debugBtn" class="small">PRINT PROVIDER</button>
+      </div>
+      <div class="muted" style="margin-top:6px">Eager connection will try to silently reconnect if you previously approved this origin.</div>
+      <div class="warning" id="secureWarning" style="display:none">Warning: page must be served over HTTPS and opened from inside Phantom's in-app browser for the wallet to be injected.</div>
+      <div class="warning" id="iframeWarning" style="display:none">Warning: page detected inside an iframe — Phantom may not inject.</div>
+    </div>
 
-    <form id="launchForm" style="display:none;">
+    <form id="launchForm" style="display:none;margin-top:12px">
       <input type="text" id="name" placeholder="Token Name (optional)">
       <input type="text" id="symbol" placeholder="Symbol (max 10)" maxlength="10" required>
-      <input type="number" id="supply" placeholder="Total Supply (integer)" required min="1" step="1">
-      <select id="decimals">
-        <option value="9">9 Decimals (Standard)</option>
-        <option value="6">6 Decimals (USDC Style)</option>
-        <option value="0">0 Decimals (Chaos)</option>
-      </select>
-      <div class="warning">Revoking mint/freeze authorities is irreversible. Make sure this is desired.</div>
-      <button type="submit" id="createBtn">BIRTH THE ABOMINATION</button>
+      <div class="row">
+        <input type="number" id="supply" placeholder="Total Supply (integer)" min="1" step="1" required>
+        <select id="decimals">
+          <option value="9">9 Decimals</option>
+          <option value="6">6 Decimals</option>
+          <option value="0">0 Decimals</option>
+        </select>
+      </div>
+      <div class="warning">Revoking mint/freeze authorities is irreversible — this UI will permanently burn them.</div>
+      <div class="row" style="margin-top:8px">
+        <button type="submit" id="createBtn">BIRTH THE ABOMINATION</button>
+        <button type="button" id="resetBtn" class="small">RESET</button>
+      </div>
     </form>
 
     <div id="log" class="log-box" aria-live="polite"></div>
@@ -59,7 +74,7 @@
   // Buffer polyfill for browser
   window.Buffer = buffer.Buffer;
 
-  const { Connection, PublicKey, Keypair, Transaction, SystemProgram, ComputeBudgetProgram } = solanaWeb3;
+  const { Connection, Keypair, Transaction, SystemProgram, ComputeBudgetProgram } = solanaWeb3;
   const {
     TOKEN_PROGRAM_ID,
     createInitializeMintInstruction,
@@ -71,50 +86,167 @@
     AuthorityType
   } = splToken;
 
-  const statusEl = document.getElementById('status');
-  const connectBtn = document.getElementById('connectBtn');
-  const launchForm = document.getElementById('launchForm');
-  const logBox = document.getElementById('log');
-
-  let provider = null;       // wallet provider object (kept for reuse)
+  // Globals
+  let provider = null;
   let userPubkey = null;
   const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
 
+  // DOM
+  const statusEl = document.getElementById('status');
+  const connectBtn = document.getElementById('connectBtn');
+  const debugBtn = document.getElementById('debugBtn');
+  const logBox = document.getElementById('log');
+  const launchForm = document.getElementById('launchForm');
+  const createBtn = document.getElementById('createBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const secureWarning = document.getElementById('secureWarning');
+  const iframeWarning = document.getElementById('iframeWarning');
+
   function log(msg) {
+    const escaped = msg; // we intentionally allow some HTML for clearer links / color
     logBox.style.display = 'block';
-    logBox.innerHTML += msg + "<br>";
+    logBox.innerHTML = escaped + '<br>' + logBox.innerHTML;
   }
   function setStatus(t) { statusEl.textContent = t; }
 
-  async function handleConnect() {
+  // Robust Phantom detection
+  function getPhantomProvider() {
+    // Prefer the phantom namespace
     try {
-      // Prefer Phantom provider object (window.phantom?.solana) but accept injected window.solana as fallback
-      provider = window.phantom?.solana || window.solana;
-      if (!provider) {
-        setStatus("PHANTOM NOT FOUND");
-        // Provide user friendly instructions instead of forcing a new tab
-        log('No Phantom wallet detected. Install Phantom from https://phantom.app/');
-        return;
+      if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) {
+        return window.phantom.solana;
       }
-
-      setStatus("AWAITING WALLET APPROVAL...");
-      // Request connection
-      const resp = await provider.connect();
-      // Phantom returns a PublicKey in resp.publicKey
-      userPubkey = resp.publicKey;
-      setStatus(`CONNECTED: ${userPubkey.toString().slice(0,6)}...${userPubkey.toString().slice(-4)}`);
-      connectBtn.style.display = 'none';
-      launchForm.style.display = 'block';
-    } catch (err) {
-      console.error("Connection Error:", err);
-      setStatus("CONNECTION REJECTED");
-      log("Connection rejected or failed: " + (err?.message || err));
+      if (window.solana && window.solana.isPhantom) {
+        return window.solana;
+      }
+      // Some environments may set isPhantom later; return a plausible object if present
+      if (window.phantom && window.phantom.solana) return window.phantom.solana;
+      if (window.solana) return window.solana;
+      return null;
+    } catch (e) {
+      return null;
     }
   }
 
-  connectBtn.onclick = handleConnect;
+  // Check environment (HTTPS + top-level)
+  function checkEnvironment() {
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+      secureWarning.style.display = 'block';
+      log('Page is not served over HTTPS. Phantom inject requires secure origin.');
+    } else {
+      secureWarning.style.display = 'none';
+    }
+    if (window.top !== window.self) {
+      iframeWarning.style.display = 'block';
+      log('Page is inside an iframe; wallet injection may fail.');
+    } else {
+      iframeWarning.style.display = 'none';
+    }
+  }
 
-  // Validate inputs
+  // Attempt eager/silent connection: onlyIfTrusted = true will NOT prompt the user
+  async function tryEagerConnect() {
+    provider = getPhantomProvider();
+    console.log('getPhantomProvider() =>', provider);
+    if (!provider) {
+      setStatus('PHANTOM NOT FOUND');
+      log('No provider detected yet. Make sure you opened this URL inside Phantom in-app browser (Browser → enter URL).');
+      return;
+    }
+    setStatus('PHANTOM DETECTED — CHECKING TRUST...');
+    try {
+      // If already connected, provider.isConnected may be true
+      if (provider.isConnected && provider.publicKey) {
+        userPubkey = provider.publicKey;
+        onWalletConnected(userPubkey);
+        return;
+      }
+
+      // Try silent connect (onlyIfTrusted). This will not open a popup.
+      const resp = await provider.connect?.({ onlyIfTrusted: true });
+      if (resp && resp.publicKey) {
+        userPubkey = resp.publicKey;
+        log('Silent reconnection successful: ' + userPubkey.toString());
+        onWalletConnected(userPubkey);
+        return;
+      }
+
+      // Not trusted yet
+      setStatus('PHANTOM AVAILABLE - NOT CONNECTED');
+      log('Provider present but origin not trusted. Press CONNECT PHANTOM to approve.');
+    } catch (err) {
+      console.error('Eager connect error', err);
+      setStatus('PHANTOM AVAILABLE - NOT CONNECTED');
+      log('Eager connect failed: ' + (err?.message || err));
+    }
+  }
+
+  function onWalletConnected(pubkey) {
+    setStatus(`CONNECTED: ${pubkey.toString().slice(0,6)}...${pubkey.toString().slice(-4)}`);
+    connectBtn.style.display = 'none';
+    document.getElementById('controls').style.display = 'block';
+    launchForm.style.display = 'block';
+    log('Connected: ' + pubkey.toString());
+    // Listen for disconnect events if provider supports it
+    try {
+      provider.on && provider.on('disconnect', () => {
+        setStatus('DISCONNECTED');
+        connectBtn.style.display = 'inline-block';
+        launchForm.style.display = 'none';
+        log('Wallet disconnected');
+      });
+    } catch (e) { /* ignore */ }
+  }
+
+  // Connect (user gesture) - will open the wallet prompt
+  async function handleConnectClick() {
+    provider = getPhantomProvider();
+    if (!provider) {
+      setStatus('PHANTOM NOT FOUND');
+      log('No provider detected. Open this URL inside Phantom in-app browser and ensure it is served over HTTPS.');
+      return;
+    }
+    setStatus('AWAITING WALLET APPROVAL...');
+    try {
+      const resp = await provider.connect(); // user gesture required
+      if (resp && resp.publicKey) {
+        userPubkey = resp.publicKey;
+        onWalletConnected(userPubkey);
+      } else if (provider.publicKey) {
+        userPubkey = provider.publicKey;
+        onWalletConnected(userPubkey);
+      } else {
+        setStatus('CONNECTION FAILED');
+        log('connect() returned no publicKey.');
+      }
+    } catch (err) {
+      console.error('connect error', err);
+      setStatus('CONNECTION REJECTED');
+      log('connect() failed: ' + (err?.message || err));
+    }
+  }
+
+  // Debug: print provider objects
+  function printProviderDebug() {
+    const p = getPhantomProvider();
+    log('<strong>window.phantom:</strong> ' + (typeof window.phantom !== 'undefined'));
+    log('<strong>window.solana:</strong> ' + (typeof window.solana !== 'undefined'));
+    if (p) {
+      // Print a few keys to avoid dumping functions
+      const info = {
+        isPhantom: p.isPhantom || false,
+        isConnected: p.isConnected || false,
+        publicKey: p.publicKey ? p.publicKey.toString() : null,
+        hasSignTx: !!p.signTransaction,
+        hasSignMessage: !!p.signMessage
+      };
+      log('<pre>' + JSON.stringify(info, null, 2) + '</pre>');
+    } else {
+      log('No provider object found yet (null).');
+    }
+  }
+
+  // Minting flow (same improved logic from prior file)
   function validateInputs({ symbol, supply, decimals }) {
     if (!symbol || symbol.trim().length === 0) throw new Error("Symbol is required.");
     if (!/^[A-Za-z0-9-_]{1,10}$/.test(symbol)) throw new Error("Symbol must be 1-10 chars: letters, numbers, - or _.");
@@ -125,9 +257,10 @@
 
   launchForm.onsubmit = async (e) => {
     e.preventDefault();
-    const createBtn = document.getElementById('createBtn');
+    createBtn.disabled = true;
+    createBtn.textContent = 'TRANSMITTING...';
 
-    const name = document.getElementById('name').value || "";
+    const name = document.getElementById('name').value || '';
     const symbol = document.getElementById('symbol').value.trim();
     const supply = document.getElementById('supply').value;
     const decimals = Number(document.getElementById('decimals').value);
@@ -136,32 +269,28 @@
       validateInputs({ symbol, supply, decimals });
     } catch (err) {
       log('<span style="color:#ff9999;">Input error: ' + err.message + '</span>');
+      createBtn.disabled = false;
+      createBtn.textContent = 'BIRTH THE ABOMINATION';
       return;
     }
 
-    createBtn.disabled = true;
-    createBtn.textContent = "TRANSMITTING...";
-    logBox.style.display = 'block';
-    log("Initializing Void Protocol...");
-
     try {
-      if (!provider || !userPubkey) throw new Error("Wallet not connected.");
-      if (!provider.signTransaction) throw new Error("Wallet does not support signTransaction.");
+      if (!provider || !userPubkey) throw new Error('Wallet not connected.');
+      if (!provider.signTransaction) throw new Error('Wallet does not support signTransaction.');
+
+      log('Preparing mint...');
 
       const mintKeypair = Keypair.generate();
       const lamports = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
 
-      // Use BigInt arithmetic for supply * 10**decimals
       const fullSupply = BigInt(supply) * (10n ** BigInt(decimals));
 
-      const transaction = new Transaction();
+      const tx = new Transaction();
 
-      // Optional: add compute unit price - don't set extremely high microLamports
-      // Keep this conservative; change only if you know what you're doing
-      // transaction.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100000 }));
+      // (Optional) add compute price only if needed - comment out unless necessary
+      // tx.add(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100000 }));
 
-      // Create mint account + initialize mint (mint authority = user, freeze authority = user)
-      transaction.add(
+      tx.add(
         SystemProgram.createAccount({
           fromPubkey: userPubkey,
           newAccountPubkey: mintKeypair.publicKey,
@@ -172,24 +301,22 @@
         createInitializeMintInstruction(
           mintKeypair.publicKey,
           decimals,
-          userPubkey,  // mint authority
-          userPubkey   // freeze authority (we will revoke it later)
+          userPubkey,
+          userPubkey
         )
       );
 
-      // Associated Token Account (ATA) for the creator
       const ata = await getAssociatedTokenAddress(mintKeypair.publicKey, userPubkey);
-      transaction.add(
+      tx.add(
         createAssociatedTokenAccountInstruction(
-          userPubkey, // payer
-          ata,        // associated token address
-          userPubkey, // owner of ATA
+          userPubkey,
+          ata,
+          userPubkey,
           mintKeypair.publicKey
         )
       );
 
-      // Mint everything to the creator's ATA
-      transaction.add(
+      tx.add(
         createMintToInstruction(
           mintKeypair.publicKey,
           ata,
@@ -198,57 +325,79 @@
         )
       );
 
-      // Revoke mint and freeze authorities (use AuthorityType constants)
-      transaction.add(
+      tx.add(
         createSetAuthorityInstruction(
           mintKeypair.publicKey,
           userPubkey,
           AuthorityType.MintTokens,
-          null // revoke
+          null
         ),
         createSetAuthorityInstruction(
           mintKeypair.publicKey,
           userPubkey,
           AuthorityType.FreezeAccount,
-          null // revoke
+          null
         )
       );
 
-      // Prepare blockhash & fee payer
       const latest = await connection.getLatestBlockhash('confirmed');
-      transaction.recentBlockhash = latest.blockhash;
-      transaction.feePayer = userPubkey;
+      tx.recentBlockhash = latest.blockhash;
+      tx.feePayer = userPubkey;
 
-      // Partially sign with newly created mint keypair (mint account must sign)
-      transaction.partialSign(mintKeypair);
+      // Partial sign by the mint account
+      tx.partialSign(mintKeypair);
 
-      log("Requesting wallet signature...");
-      // Let the wallet sign (adds the wallet signature)
-      const signedTx = await provider.signTransaction(transaction);
+      log('Requesting wallet signature (this will open Phantom) ...');
+      const signed = await provider.signTransaction(tx);
+      const raw = signed.serialize();
 
-      // sendRawTransaction and confirm with blockhash + lastValidBlockHeight
-      const raw = signedTx.serialize();
-      log("Broadcasting transaction...");
+      log('Broadcasting transaction...');
       const signature = await connection.sendRawTransaction(raw);
+      log('Transaction submitted: ' + signature + ' — confirming...');
 
-      // confirm using the blockhash + lastValidBlockHeight returned earlier
       await connection.confirmTransaction({
         signature,
         blockhash: latest.blockhash,
         lastValidBlockHeight: latest.lastValidBlockHeight
       }, 'confirmed');
 
-      log(`<strong>SUCCESS.</strong> Token mint: <a href="https://solscan.io/address/${mintKeypair.publicKey.toBase58()}" target="_blank">${mintKeypair.publicKey.toBase58()}</a>`);
-      setStatus("VOID BIRTH COMPLETE");
-      createBtn.textContent = "BIRTH COMPLETE";
+      log('<strong>SUCCESS.</strong> Mint: <a href="https://solscan.io/address/' + mintKeypair.publicKey.toBase58() + '" target="_blank">' + mintKeypair.publicKey.toBase58() + '</a>');
+      setStatus('VOID BIRTH COMPLETE');
+      createBtn.textContent = 'BIRTH COMPLETE';
     } catch (err) {
-      console.error(err);
+      console.error('Mint error', err);
       log('<span style="color:red;">FAILED: ' + (err?.message || err) + '</span>');
+      setStatus('ERROR');
       createBtn.disabled = false;
-      createBtn.textContent = "RETRY BIRTH";
-      setStatus("ERROR");
+      createBtn.textContent = 'RETRY BIRTH';
     }
   };
+
+  resetBtn.onclick = () => {
+    document.getElementById('name').value = '';
+    document.getElementById('symbol').value = '';
+    document.getElementById('supply').value = '';
+    document.getElementById('decimals').value = '9';
+    createBtn.disabled = false;
+    createBtn.textContent = 'BIRTH THE ABOMINATION';
+    log('Form reset');
+  };
+
+  // Hook up UI
+  connectBtn.onclick = handleConnectClick;
+  debugBtn.onclick = printProviderDebug;
+
+  // Initialization on load
+  window.addEventListener('DOMContentLoaded', async () => {
+    checkEnvironment();
+    // Try to eager connect after a short delay (gives provider time to inject)
+    setTimeout(tryEagerConnect, 600);
+    // Also try again later in case the provider injects later
+    setTimeout(tryEagerConnect, 1200);
+  });
+
+  // Helpful note for manual remote debugging
+  console.log('VOID LAUNCH loaded. Use the Phantom in-app browser and ensure HTTPS.');
 </script>
 </body>
 </html>
