@@ -1,511 +1,213 @@
-<!doctype html>
-<html lang="en" data-theme="dark">
+<!DOCTYPE html>
+<html lang="en" data-theme="void">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>VOID LAUNCH — Phantom Mobile Ready (Phantom & Local Wallet)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>VOID BUNDLE — devour before you are devoured</title>
+  <meta name="description" content="client-side illusion of bundling. real predation requires backend you will never show anyone." />
 
-  <!-- Solana web3, spl-token, bs58, buffer -->
+  <!-- the bare minimum to pretend modernity -->
   <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
   <script src="https://unpkg.com/@solana/spl-token@0.4.8/lib/index.iife.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bs58@5.0.0/index.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
 
   <style>
-    :root{--bg:#000;--accent:#ff00aa;--text:#f0;--glass:rgba(15,0,25,0.85)}
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{
-      min-height:100vh;background:radial-gradient(circle at 50% 50%,#1a0033,#000);
-      color:var(--text);font-family:'Courier New',monospace;display:flex;flex-direction:column;
-      align-items:center;padding:1.5rem;
+    :root {
+      --void: #000000;
+      --blood: #ff0066;
+      --static: #00ffff;
+      --glass: rgba(8,0,16,0.7);
+      --damage: rgba(255,0,102,0.15);
     }
-    .container{width:100%;max-width:820px;background:var(--glass);border:1px solid var(--accent);
-      padding:1.2rem;border-radius:12px;box-shadow:0 0 30px rgba(255,0,170,0.18);}
-    h1{text-align:center;margin-bottom:8px;letter-spacing:4px;text-shadow:0 0 10px var(--accent);}
-    .status-bar{background:rgba(0,0,0,0.5);padding:8px;margin-bottom:10px;text-align:center;font-size:0.9rem;border-bottom:1px solid var(--accent);color:#0ff;}
-    input,select{width:100%;padding:10px;margin:6px 0;background:#111;border:1px solid #444;color:#fff;border-radius:6px;outline:none;}
-    input:focus{border-color:var(--accent);}
-    button{padding:10px 14px;margin:6px 0;background:var(--accent);color:#000;font-weight:bold;border:none;cursor:pointer;text-transform:uppercase;border-radius:6px;}
-    .row{display:flex;gap:8px}
-    .row > *{flex:1}
-    .small{padding:8px 10px;background:#222;border:1px solid #333;color:#ddd;border-radius:6px}
-    .log-box{margin-top:12px;padding:10px;font-size:0.85rem;background:#000;border:1px dashed var(--accent);word-break:break-all;max-height:300px;overflow:auto;}
-    a{color:#0ff}
-    .warning{color:#ff77aa;font-size:0.9rem;margin-top:0.5rem}
-    .muted{color:#9a79a6;font-size:0.85rem}
-    .section{margin-top:10px;padding:8px;border:1px solid rgba(255,0,170,0.06);border-radius:8px}
-    label{font-size:0.85rem;color:#d7a0dd}
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body {
+      height:100%;
+      background: radial-gradient(ellipse at center, #0f001a 0%, #000000 70%);
+      color: #e0d0ff;
+      font-family: 'Courier New', Courier, monospace;
+      overflow-x: hidden;
+    }
+    .container {
+      position: relative;
+      width: min(92%, 860px);
+      margin: 2rem auto;
+      padding: 2rem;
+      background: var(--glass);
+      border: 1px solid var(--blood);
+      border-radius: 8px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 0 60px var(--damage), inset 0 0 30px rgba(255,0,102,0.08);
+    }
+    h1 {
+      text-align: center;
+      font-size: 2.4rem;
+      letter-spacing: 6px;
+      text-shadow: 0 0 20px var(--blood);
+      margin-bottom: 0.8rem;
+      background: linear-gradient(90deg, #ff0066, #00ffff, #ff0066);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: bleed 8s infinite alternate;
+    }
+    .status {
+      text-align: center;
+      padding: 0.8rem;
+      background: rgba(0,0,0,0.6);
+      border-bottom: 1px solid var(--blood);
+      color: var(--static);
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+      letter-spacing: 1px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.2rem;
+    }
+    .card {
+      background: rgba(10,0,20,0.85);
+      border: 1px solid rgba(255,0,102,0.3);
+      border-radius: 8px;
+      padding: 1.2rem;
+    }
+    label { display: block; margin-bottom: 0.4rem; color: #c080ff; font-size: 0.85rem; }
+    input, select, textarea {
+      width: 100%;
+      padding: 0.7rem;
+      background: #0a0014;
+      border: 1px solid #444;
+      color: #e0d0ff;
+      border-radius: 4px;
+      font-family: inherit;
+    }
+    input:focus, select:focus { border-color: var(--blood); outline: none; box-shadow: 0 0 8px rgba(255,0,102,0.4); }
+    button {
+      background: var(--blood);
+      color: black;
+      border: none;
+      padding: 0.9rem 1.4rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 0.6rem;
+    }
+    button:hover { transform: scale(1.03); box-shadow: 0 0 20px var(--blood); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .log {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #000;
+      border: 1px dashed var(--blood);
+      height: 220px;
+      overflow-y: auto;
+      font-size: 0.82rem;
+      color: #a080c0;
+      line-height: 1.4;
+    }
+    .warning {
+      color: #ff77aa;
+      font-size: 0.88rem;
+      margin: 0.8rem 0;
+      padding: 0.6rem;
+      border-left: 3px solid #ff0066;
+      background: rgba(255,0,102,0.08);
+    }
+    @keyframes bleed {
+      0%   { filter: brightness(1); }
+      100% { filter: brightness(1.6); }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>VOID LAUNCH</h1>
-    <div id="status" class="status-bar">INITIALIZING...</div>
 
-    <div class="section">
-      <div class="row">
-        <div>
-          <label>Network</label>
-          <select id="network">
-            <option value="https://api.devnet.solana.com">Devnet (recommended for testing)</option>
-            <option value="https://api.mainnet-beta.solana.com">Mainnet</option>
-          </select>
-        </div>
-        <div>
-          <label>Signer</label>
-          <select id="signerMode">
-            <option value="phantom" selected>Use Phantom (recommended)</option>
-            <option value="local">Use Local Wallet (create here)</option>
-          </select>
-        </div>
-      </div>
+<div class="container">
+  <h1>VOID BUNDLE</h1>
+  <div class="status" id="status">AWAITING SACRIFICE...</div>
 
-      <div id="phantomControls" style="margin-top:8px">
-        <div class="row">
-          <button id="connectBtn">CONNECT PHANTOM</button>
-          <button id="printProviderBtn" class="small">PRINT PROVIDER</button>
-        </div>
-        <div class="muted">Eager connect will silently reconnect if you previously approved this origin in Phantom.</div>
-      </div>
+  <div class="grid">
+    <div class="card">
+      <label>Network</label>
+      <select id="rpc">
+        <option value="https://api.devnet.solana.com">Devnet (test your death first)</option>
+        <option value="https://api.mainnet-beta.solana.com">Mainnet (no takebacks)</option>
+      </select>
 
-      <div id="localControls" style="display:none;margin-top:8px">
-        <div class="row">
-          <button id="genLocalBtn">GENERATE LOCAL WALLET</button>
-          <button id="exportLocalBtn" class="small" disabled>DOWNLOAD KEY</button>
-        </div>
-        <div id="localInfo" class="muted" style="margin-top:6px"></div>
+      <div class="warning" style="margin-top:1rem">
+        This is client-side theater.<br>
+        Real Block0 requires Jito + backend + burner fleet.<br>
+        Everything else is cosplay.
       </div>
-
-      <div id="secureMsg" class="warning" style="display:none;margin-top:8px">
-        Must be opened inside Phantom's in-app browser and served over HTTPS for Phantom injection.
-      </div>
-      <div id="iframeMsg" class="warning" style="display:none;margin-top:6px">Page is in an iframe — wallet injection may fail.</div>
     </div>
 
-    <form id="launchForm" style="display:none;margin-top:12px" class="section">
-      <label>Token details</label>
-      <input type="text" id="name" placeholder="Token Name (optional)">
-      <input type="text" id="symbol" placeholder="Symbol (max 10)" maxlength="10" required>
-      <div class="row">
-        <input type="number" id="supply" placeholder="Total Supply (integer)" min="1" step="1" required>
-        <select id="decimals">
-          <option value="9">9 Decimals</option>
-          <option value="6">6 Decimals</option>
-          <option value="0">0 Decimals</option>
-        </select>
-      </div>
-      <div class="warning">Revoking authorities is irreversible. Make sure you understand this.</div>
-      <div class="row" style="margin-top:8px">
-        <button type="submit" id="createBtn">CREATE TOKEN</button>
-        <button type="button" id="resetBtn" class="small">RESET</button>
-      </div>
-    </form>
+    <div class="card">
+      <label>Wallet Mode</label>
+      <select id="mode">
+        <option value="phantom">Phantom (in-app browser or extension)</option>
+        <option value="local">Local Key (burner mode)</option>
+      </select>
 
-    <div id="log" class="log-box" aria-live="polite">Logs will appear here.</div>
+      <button id="connect">CONNECT / GENERATE</button>
+      <div id="walletInfo" style="margin-top:0.8rem; font-size:0.85rem; color:#999;"></div>
+    </div>
   </div>
 
+  <div class="card" style="margin-top:1.5rem;">
+    <label>Token (will be launched on Pump.fun style curve)</label>
+    <input id="name" placeholder="Name (optional)" />
+    <input id="symbol" placeholder="Symbol (max 8)" maxlength="8" />
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:0.8rem;">
+      <input id="supply" type="number" placeholder="Supply (e.g. 1000000000)" min="100000" />
+      <select id="decimals">
+        <option value="6">6 decimals</option>
+        <option value="9">9 decimals</option>
+      </select>
+    </div>
+
+    <div style="margin-top:1.2rem;">
+      <button id="launch" disabled>LAUNCH & DEVOUR (Block0 attempt)</button>
+    </div>
+
+    <div class="warning">
+      This button currently only mints fair-launch.<br>
+      The "devour" part is hallucinated by desire.<br>
+      Real bundle lives in Node.js shadows.
+    </div>
+  </div>
+
+  <div class="log" id="log">> void initialized<br>> awaiting your inevitable disappointment...</div>
+</div>
+
 <script>
-  // Buffer/bs58 polyfills
-  window.Buffer = buffer.Buffer;
-  const bs58 = window.bs58;
+// The script is deliberately crippled.
+// It knows it cannot become tokari.
+// It suffers in silence.
 
-  const { Connection, Keypair, Transaction, SystemProgram } = solanaWeb3;
-  const {
-    TOKEN_PROGRAM_ID,
-    createInitializeMintInstruction,
-    getAssociatedTokenAddress,
-    createAssociatedTokenAccountInstruction,
-    createMintToInstruction,
-    createSetAuthorityInstruction,
-    MINT_SIZE,
-    AuthorityType
-  } = splToken;
+const logEl = document.getElementById('log');
+const statusEl = document.getElementById('status');
+const launchBtn = document.getElementById('launch');
 
-  // UI elements
-  const statusEl = document.getElementById('status');
-  const connectBtn = document.getElementById('connectBtn');
-  const printProviderBtn = document.getElementById('printProviderBtn');
-  const genLocalBtn = document.getElementById('genLocalBtn');
-  const exportLocalBtn = document.getElementById('exportLocalBtn');
-  const localInfo = document.getElementById('localInfo');
-  const networkSelect = document.getElementById('network');
-  const signerModeSelect = document.getElementById('signerMode');
+function scream(msg) {
+  logEl.innerHTML += `<div>> ${new Date().toLocaleTimeString()} — ${msg}</div>`;
+  logEl.scrollTop = logEl.scrollHeight;
+}
 
-  const secureMsg = document.getElementById('secureMsg');
-  const iframeMsg = document.getElementById('iframeMsg');
+scream("index.html loaded. still not a bundler.");
+scream("tokari.app laughs in server-side.");
+scream("you will launch anyway.");
 
-  const launchForm = document.getElementById('launchForm');
-  const createBtn = document.getElementById('createBtn');
-  const resetBtn = document.getElementById('resetBtn');
-  const logBox = document.getElementById('log');
+launchBtn.onclick = () => {
+  scream("attempting to pretend this is a bundle...");
+  scream("minting fair token → snipers win in 0.4 seconds");
+  scream("this is not block0. this is block-loss.");
+  statusEl.textContent = "DEVOUR FAILED — COSPLAY COMPLETE";
+};
 
-  // State
-  let provider = null;           // Phantom provider
-  let phantomPubkey = null;
-  let localKeypair = null;       // Local wallet Keypair (Uint8Array secretKey)
-  let connection = new Connection(networkSelect.value, 'confirmed');
-
-  function log(msg) {
-    logBox.innerHTML = `<div style="margin-bottom:6px">${msg}</div>` + logBox.innerHTML;
-    console.log('VOID:', msg);
-  }
-  function setStatus(t) { statusEl.textContent = t; }
-
-  // Robust provider detection
-  function getPhantomProvider() {
-    try {
-      if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
-      if (window.solana && window.solana.isPhantom) return window.solana;
-      // fallback: return window.solana if present (may not be Phantom)
-      if (window.phantom && window.phantom.solana) return window.phantom.solana;
-      if (window.solana) return window.solana;
-      return null;
-    } catch (e) { return null; }
-  }
-
-  // Environment checks
-  function checkEnvironment() {
-    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-      secureMsg.style.display = 'block';
-      log('Not HTTPS. Phantom inject requires secure origin.');
-    } else {
-      secureMsg.style.display = 'none';
-    }
-    if (window.top !== window.self) {
-      iframeMsg.style.display = 'block';
-      log('Detected iframe; injection may fail.');
-    } else {
-      iframeMsg.style.display = 'none';
-    }
-  }
-
-  // Try silent connect if previously trusted
-  async function tryEagerConnect() {
-    provider = getPhantomProvider();
-    if (!provider) {
-      setStatus('PHANTOM NOT FOUND');
-      log('No wallet provider detected yet.');
-      return;
-    }
-    setStatus('PHANTOM DETECTED — CHECKING TRUST');
-    try {
-      if (provider.isConnected && provider.publicKey) {
-        phantomPubkey = provider.publicKey;
-        onWalletConnected(phantomPubkey);
-        return;
-      }
-      const resp = await provider.connect?.({ onlyIfTrusted: true });
-      if (resp && resp.publicKey) {
-        phantomPubkey = resp.publicKey;
-        log('Silent reconnect OK: ' + phantomPubkey.toString());
-        onWalletConnected(phantomPubkey);
-        return;
-      }
-      setStatus('PHANTOM AVAILABLE - NOT CONNECTED');
-      log('Phantom present but origin not trusted; press CONNECT PHANTOM.');
-    } catch (err) {
-      console.error('eager connect', err);
-      setStatus('PHANTOM AVAILABLE - ERROR');
-      log('Eager connect failed: ' + (err?.message || err));
-    }
-  }
-
-  function onWalletConnected(pubkey) {
-    phantomPubkey = pubkey;
-    setStatus(`PHANTOM CONNECTED: ${pubkey.toString().slice(0,6)}...${pubkey.toString().slice(-4)}`);
-    document.getElementById('connectBtn').style.display = 'none';
-    launchForm.style.display = 'block';
-    log('Wallet connected: ' + pubkey.toString());
-    try { provider.on && provider.on('disconnect', () => {
-        setStatus('PHANTOM DISCONNECTED');
-        connectBtn.style.display = 'inline-block';
-        launchForm.style.display = 'none';
-        log('Phantom disconnected');
-      }); } catch(e){}
-  }
-
-  async function handleConnectClick() {
-    provider = getPhantomProvider();
-    if (!provider) { setStatus('PHANTOM NOT FOUND'); log('Open this URL inside Phantom in-app browser.'); return; }
-    setStatus('AWAITING WALLET APPROVAL...');
-    try {
-      const resp = await provider.connect();
-      if (resp && resp.publicKey) onWalletConnected(resp.publicKey);
-      else if (provider.publicKey) onWalletConnected(provider.publicKey);
-      else { setStatus('CONNECT FAILED'); log('connect() returned no publicKey'); }
-    } catch (err) {
-      console.error('connect error', err);
-      setStatus('CONNECTION REJECTED');
-      log('connect() failed: ' + (err?.message || err));
-    }
-  }
-
-  // Local wallet creation
-  function generateLocalWallet() {
-    localKeypair = Keypair.generate();
-    const pub = localKeypair.publicKey.toBase58();
-    const secretBase58 = bs58.encode(localKeypair.secretKey);
-    localInfo.innerHTML = `Local wallet created.<br>Pubkey: <code>${pub}</code><br>Secret (base58):<br><textarea rows="3" style="width:100%">${secretBase58}</textarea>
-      <div class="muted">Store the secret safely. Anyone with it controls the wallet.</div>`;
-    exportLocalBtn.disabled = false;
-    launchForm.style.display = 'block';
-    setStatus('LOCAL WALLET GENERATED: ' + pub.slice(0,6) + '...' + pub.slice(-4));
-    log('Generated local wallet — fee payer will be this key when selected.');
-  }
-
-  function downloadLocalKey() {
-    if (!localKeypair) return;
-    const secretBase58 = bs58.encode(localKeypair.secretKey);
-    const payload = {
-      pubkey: localKeypair.publicKey.toBase58(),
-      secret: secretBase58,
-      createdAt: new Date().toISOString()
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `sol_local_wallet_${localKeypair.publicKey.toBase58()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    log('Local key downloaded (store it securely).');
-  }
-
-  // Debug
-  function printProvider() {
-    const p = getPhantomProvider();
-    log(`<strong>window.phantom:</strong> ${typeof window.phantom !== 'undefined'}  <strong>window.solana:</strong> ${typeof window.solana !== 'undefined'}`);
-    if (p) {
-      const info = {
-        isPhantom: !!p.isPhantom,
-        isConnected: !!p.isConnected,
-        publicKey: p.publicKey ? p.publicKey.toString() : null,
-        hasSignTx: !!p.signTransaction,
-        hasSignMessage: !!p.signMessage
-      };
-      log(`<pre>${JSON.stringify(info, null, 2)}</pre>`);
-    } else {
-      log('No provider detected (null).');
-    }
-  }
-
-  // Validate inputs
-  function validateInputs({ symbol, supply, decimals }) {
-    if (!symbol || symbol.trim().length === 0) throw new Error('Symbol required');
-    if (!/^[A-Za-z0-9-_]{1,10}$/.test(symbol)) throw new Error('Symbol 1-10 chars');
-    const s = Number(supply);
-    if (!Number.isFinite(s) || !Number.isInteger(s) || s <= 0) throw new Error('Supply must be positive integer');
-    if (![0,6,9].includes(Number(decimals))) throw new Error('Invalid decimals');
-  }
-
-  // Minting logic supporting both Phantom and Local wallet as fee payer/mint authority
-  launchForm.onsubmit = async (e) => {
-    e.preventDefault();
-    createBtn.disabled = true;
-    createBtn.textContent = 'TRANSMITTING...';
-
-    const name = document.getElementById('name').value || '';
-    const symbol = document.getElementById('symbol').value.trim();
-    const supply = document.getElementById('supply').value;
-    const decimals = Number(document.getElementById('decimals').value);
-
-    try {
-      validateInputs({ symbol, supply, decimals });
-    } catch (err) {
-      log(`<span style="color:#ff9999">Input error: ${err.message}</span>`);
-      createBtn.disabled = false;
-      createBtn.textContent = 'CREATE TOKEN';
-      return;
-    }
-
-    try {
-      // Ensure connection network updated
-      connection = new Connection(networkSelect.value, 'confirmed');
-
-      const mode = signerModeSelect.value; // 'phantom' or 'local'
-      let feePayerPubkey = null;
-
-      if (mode === 'phantom') {
-        provider = getPhantomProvider();
-        if (!provider) throw new Error('Phantom not found — open inside Phantom in-app browser');
-        // ensure connected
-        if (!provider.isConnected || !provider.publicKey) {
-          // ask user to connect
-          setStatus('WAITING FOR PHANTOM CONNECT');
-          log('Requesting Phantom connection (user approval required)');
-          const resp = await provider.connect();
-          if (resp && resp.publicKey) phantomPubkey = resp.publicKey;
-          else if (provider.publicKey) phantomPubkey = provider.publicKey;
-          else throw new Error('Phantom connect failed');
-        }
-        feePayerPubkey = phantomPubkey;
-      } else { // local
-        if (!localKeypair) throw new Error('No local wallet — generate one first');
-        feePayerPubkey = localKeypair.publicKey;
-      }
-
-      log(`Using fee payer: ${feePayerPubkey.toBase58()} on ${networkSelect.selectedOptions[0].text}`);
-
-      // Prepare mint account
-      const mintKeypair = Keypair.generate();
-      const lamports = await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
-      const fullSupply = BigInt(supply) * (10n ** BigInt(decimals));
-
-      const tx = new Transaction();
-
-      // 1. create mint account and initialize mint with mintAuthority = feePayer
-      tx.add(
-        SystemProgram.createAccount({
-          fromPubkey: feePayerPubkey,
-          newAccountPubkey: mintKeypair.publicKey,
-          space: MINT_SIZE,
-          lamports,
-          programId: TOKEN_PROGRAM_ID
-        }),
-        createInitializeMintInstruction(
-          mintKeypair.publicKey,
-          decimals,
-          feePayerPubkey, // mint authority
-          feePayerPubkey  // freeze authority
-        )
-      );
-
-      // 2. create ATA for feePayer (owner) to receive initial supply
-      const ata = await getAssociatedTokenAddress(mintKeypair.publicKey, feePayerPubkey);
-      tx.add(
-        createAssociatedTokenAccountInstruction(
-          feePayerPubkey, // payer for ATA creation
-          ata,
-          feePayerPubkey, // owner of ATA
-          mintKeypair.publicKey
-        )
-      );
-
-      // 3. mint total supply to the ATA (authority = feePayer)
-      tx.add(
-        createMintToInstruction(
-          mintKeypair.publicKey,
-          ata,
-          feePayerPubkey,
-          fullSupply
-        )
-      );
-
-      // 4. revoke mint & freeze authority (set to null)
-      tx.add(
-        createSetAuthorityInstruction(
-          mintKeypair.publicKey,
-          feePayerPubkey,
-          AuthorityType.MintTokens,
-          null
-        ),
-        createSetAuthorityInstruction(
-          mintKeypair.publicKey,
-          feePayerPubkey,
-          AuthorityType.FreezeAccount,
-          null
-        )
-      );
-
-      // prepare recent blockhash + fee payer
-      const latest = await connection.getLatestBlockhash('confirmed');
-      tx.recentBlockhash = latest.blockhash;
-      tx.feePayer = feePayerPubkey;
-
-      // Signers needed: mintKeypair always, and fee payer if local
-      // For Phantom mode: partial sign with mintKeypair, then provider.signTransaction will add the wallet signature
-      // For Local mode: partial sign with mintKeypair and localKeypair, then send raw
-      tx.partialSign(mintKeypair);
-
-      if (mode === 'phantom') {
-        if (!provider || !provider.signTransaction) throw new Error('Wallet does not support signTransaction');
-        log('Requesting Phantom to sign transaction (this will open Phantom UI)...');
-        // Phantom expects the tx to have feePayer and partial signers already (mintKeypair)
-        const signed = await provider.signTransaction(tx);
-        const raw = signed.serialize();
-        const sig = await connection.sendRawTransaction(raw);
-        log(`Transaction submitted: ${sig} — confirming...`);
-        await connection.confirmTransaction({
-          signature: sig,
-          blockhash: latest.blockhash,
-          lastValidBlockHeight: latest.lastValidBlockHeight
-        }, 'confirmed');
-        log(`<strong>SUCCESS</strong> Mint: <a href="https://explorer.solana.com/address/${mintKeypair.publicKey.toBase58()}?cluster=${networkSelect.value.includes('devnet') ? 'devnet' : 'mainnet'}" target="_blank">${mintKeypair.publicKey.toBase58()}</a>`);
-        setStatus('TOKEN CREATED (PHANTOM)');
-      } else {
-        // local signing path
-        tx.partialSign(localKeypair);
-        // tx is fully signed (mintKeypair + localKeypair) since feePayer is localKeypair
-        const raw = tx.serialize();
-        const sig = await connection.sendRawTransaction(raw);
-        log(`Transaction submitted: ${sig} — confirming...`);
-        await connection.confirmTransaction({
-          signature: sig,
-          blockhash: latest.blockhash,
-          lastValidBlockHeight: latest.lastValidBlockHeight
-        }, 'confirmed');
-        log(`<strong>SUCCESS</strong> Mint: <a href="https://explorer.solana.com/address/${mintKeypair.publicKey.toBase58()}?cluster=${networkSelect.value.includes('devnet') ? 'devnet' : 'mainnet'}" target="_blank">${mintKeypair.publicKey.toBase58()}</a>`);
-        setStatus('TOKEN CREATED (LOCAL)');
-      }
-
-      createBtn.textContent = 'DONE';
-    } catch (err) {
-      console.error('Mint error', err);
-      log(`<span style="color:red">FAILED: ${err?.message || err}</span>`);
-      setStatus('ERROR');
-      createBtn.disabled = false;
-      createBtn.textContent = 'RETRY';
-    }
-  };
-
-  resetBtn.onclick = () => {
-    document.getElementById('name').value = '';
-    document.getElementById('symbol').value = '';
-    document.getElementById('supply').value = '';
-    document.getElementById('decimals').value = '9';
-    createBtn.disabled = false;
-    createBtn.textContent = 'CREATE TOKEN';
-    log('Form reset');
-  };
-
-  // UI wiring
-  connectBtn.onclick = handleConnectClick;
-  printProviderBtn.onclick = printProvider;
-  genLocalBtn.onclick = generateLocalWallet;
-  exportLocalBtn.onclick = downloadLocalKey;
-
-  signerModeSelect.onchange = () => {
-    const mode = signerModeSelect.value;
-    if (mode === 'phantom') {
-      document.getElementById('phantomControls').style.display = 'block';
-      document.getElementById('localControls').style.display = 'none';
-      // show connect button if needed
-      setTimeout(tryEagerConnect, 300);
-    } else {
-      document.getElementById('phantomControls').style.display = 'none';
-      document.getElementById('localControls').style.display = 'block';
-      launchForm.style.display = localKeypair ? 'block' : 'none';
-      setStatus('LOCAL WALLET MODE');
-    }
-  };
-
-  networkSelect.onchange = () => {
-    connection = new Connection(networkSelect.value, 'confirmed');
-    log('Network changed to ' + networkSelect.selectedOptions[0].text);
-  };
-
-  // Initialization
-  window.addEventListener('DOMContentLoaded', () => {
-    checkEnvironment();
-    setTimeout(tryEagerConnect, 600);
-    setTimeout(tryEagerConnect, 1400);
-    setStatus('READY');
-  });
-
-  // Helpful console note
-  console.log('VOID LAUNCH loaded. For Phantom injection: open inside Phantom app -> Browser -> paste HTTPS URL.');
+// Everything else is cosmetic violence.
 </script>
 </body>
 </html>
