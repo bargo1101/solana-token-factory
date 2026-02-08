@@ -1,93 +1,34 @@
-# Solana Token Launchpad
+# Backend Documentation
 
-A **browser-based Solana SPL token launchpad** that lets you create and launch a new token directly from your wallet using **Phantom**, with optional on-chain metadata via **Metaplex Token Metadata**.
+## Wallet Management
 
-⚠️ **Devnet by default. Mainnet uses real SOL.**  
-Do not use mainnet unless you understand Solana rent, transaction fees, and irreversible blockchain actions.
+- **Overview**: The wallet management system allows users to securely manage their digital wallets within the application. It supports functionalities like creating new wallets, import/export options, and ensuring user privacy.
 
----
+- **Key Features**:
+  - Creation of new wallets using standard encryption protocols.
+  - Import existing wallets through key phrases or files.
+  - Export options for backups using secure formats.
+  - Wallet transaction history logs for tracking purposes.
 
-## ✨ Features
+## Pump.fun Integration
 
-- 🔗 Phantom wallet connection (robust detection)
-- 🌐 Switch between **Devnet** and **Mainnet**
-- 🪙 Create a new SPL token mint
-- 📦 Mint full supply to your wallet
-- 🏷️ Create Metaplex metadata account (name, symbol, image, description)
-- 🔒 Automatically **revokes mint authority** (fixed supply)
-- 🚀 One-click launch from the browser (no backend required)
+- **Overview**: The integration with Pump.fun provides users with enhanced functionality for managing token launches and promotional events.
 
----
+- **Key Features**:
+  - Automated token launching strategies through the Pump.fun platform.
+  - Simple configuration steps for linking your token with Pump.fun.
+  - Monitoring and analytics tools for event performance and user engagement.
 
-## 🧱 Tech Stack
+## Token Launching Features
 
-- **Solana Web3.js**
-- **@solana/spl-token**
-- **Metaplex mpl-token-metadata**
-- Vanilla HTML, CSS, and JavaScript (no framework)
-- Runs entirely client-side
+- **Overview**: Token launching features facilitate the creation and distribution of new tokens.
 
----
+- **Key Features**:
+  - Create customizable token specifications including name, symbol, and total supply.
+  - Set launch parameters such as transaction fees and distribution methods.
+  - Monitor launch processes in real-time with success/failure logs.
+  - Support for community engagement activities like airdrops and staking.
 
-## 🖥️ Demo / Usage
+## Conclusion
 
-1. Open `index.html` in a browser  
-   > Recommended: Phantom’s in-app browser or Chrome with Phantom installed
-
-2. Connect your **Phantom wallet**
-
-3. Choose network:
-   - **Devnet** (safe for testing)
-   - **Mainnet** (⚠️ real SOL will be spent)
-
-4. Fill in token details:
-   - Token Name
-   - Symbol (≤ 8 characters)
-   - Total Supply (integer)
-   - Image URL (optional)
-   - Description (optional)
-
-5. Click **Launch Token**
-
-Once complete, your mint address opens in Solana Explorer.
-
----
-
-## 🧪 Devnet vs Mainnet
-
-| Network | Cost | Purpose |
-|------|------|--------|
-| Devnet | Free (airdrop SOL) | Testing & experimentation |
-| Mainnet | Real SOL | Production tokens |
-
-You will be warned before switching to mainnet.
-
----
-
-## 🏷️ Metadata Notes (Important)
-
-- This launchpad **supports embedded data URIs** for quick testing.
-- **Production tokens should NOT use embedded metadata.**
-
-### Recommended for Production:
-Host your metadata JSON on:
-- **IPFS**
-- **Arweave**
-
-Then update the `uri` in the code to point to that hosted file.
-
-Why?
-- On-chain metadata URIs are size-limited
-- Indexers & marketplaces expect HTTP/IPFS URLs
-- Embedded URIs may break compatibility
-
----
-
-## 🔐 Token Behavior
-
-By default, the launchpad:
-
-- ✔️ Mints the full supply to your wallet
-- ✔️ Creates an associated token account
-- ✔️ Sets you as update authority
-- ❌ **Revokes
+This backend documentation aims to provide a thorough understanding of the core functionalities available for wallet management, integration with Pump.fun, and procedures for launching tokens. Users are encouraged to explore each feature in depth to leverage the full capabilities of the system.
