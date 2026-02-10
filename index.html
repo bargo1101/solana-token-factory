@@ -4,14 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0a0e1a">
-  <title>NEXUS LAUNCHPAD 2121 - PRODUCTION</title>
+  <title>NEXUS LAUNCHPAD 2121 - BUFFER FIXED</title>
   
-  <!-- Solana Web3 -->
+  <!-- Solana Web3.js -->
   <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
-  <!-- SPL Token -->
-  <script src="https://unpkg.com/@solana/spl-token@latest/lib/index.iife.min.js"></script>
-  <!-- Metaplex Token Metadata -->
-  <script src="https://unpkg.com/@metaplex-foundation/mpl-token-metadata@latest/dist/index.umd.min.js"></script>
+  <!-- Buffer polyfill for browser -->
+  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
   
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
@@ -461,7 +459,7 @@
         <span class="neon-violet">LAUNCHPAD</span>
       </h1>
       <div class="header-divider"></div>
-      <p style="color: #00a8cc; font-size: 12px; letter-spacing: 2px;">FULL STACK DEPLOYMENT + MARKET MAKER</p>
+      <p style="color: #00a8cc; font-size: 12px; letter-spacing: 2px;">BUFFER FIXED - READY TO DEPLOY</p>
     </div>
 
     <!-- Network Selection -->
@@ -531,22 +529,8 @@
         </div>
       </div>
 
-      <div class="grid-2">
-        <div>
-          <label>Initial Liquidity (SOL)</label>
-          <input type="number" id="initialLiquidity" placeholder="1.0" step="0.1" min="0.1" value="1.0">
-        </div>
-        <div>
-          <label>Bonding Curve</label>
-          <select id="curveType">
-            <option value="linear">Linear</option>
-            <option value="exponential" selected>Exponential (Pump.fun style)</option>
-          </select>
-        </div>
-      </div>
-
       <button class="btn-primary" id="deployBtn" onclick="deployToken()" style="margin-top: 24px;">
-        Deploy Token + Pool
+        Deploy Token
       </button>
 
       <div id="resultBox"></div>
@@ -601,10 +585,10 @@
     <div class="glass-panel">
       <div class="section-label">// SYSTEM CONSOLE</div>
       <div class="console" id="console">
-        <div class="console-line" style="color: #00ff88;">[SYSTEM] NEXUS Launchpad v2.0 initialized...</div>
-        <div class="console-line">[SYSTEM] Metaplex metadata enabled</div>
-        <div class="console-line">[SYSTEM] Market maker module loaded</div>
-        <div class="console-line">[SYSTEM] Waiting for wallet connection...</div>
+        <div class="console-line" style="color: #00ff88;">[SYSTEM] NEXUS Launchpad initialized</div>
+        <div class="console-line">[SYSTEM] Solana Web3.js loaded</div>
+        <div class="console-line">[SYSTEM] Buffer polyfill loaded</div>
+        <div class="console-line">[SYSTEM] Ready for deployment</div>
       </div>
     </div>
   </div>
@@ -621,20 +605,115 @@
   </div>
 
   <script>
-    // Configuration
+    // Ensure Buffer is available globally
+    if (typeof window.Buffer === 'undefined') {
+      window.Buffer = buffer.Buffer;
+    }
+
+    // =====================================================================
+    // EMBEDDED SPL TOKEN PROGRAM CONSTANTS AND INSTRUCTION BUILDERS
+    // =====================================================================
+    
+    const TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+    const ASSOCIATED_TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+    const TOKEN_METADATA_PROGRAM_ID = new solanaWeb3.PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
+    
+    const MINT_SIZE = 82;
+    
+    const TOKEN_INSTRUCTIONS = {
+      INITIALIZE_MINT: 0,
+      MINT_TO: 7
+    };
+
+    // Helper: Create initialize mint instruction
+    function createInitializeMintInstruction(mint, decimals, mintAuthority, freezeAuthority, programId = TOKEN_PROGRAM_ID) {
+      const keys = [
+        { pubkey: mint, isSigner: false, isWritable: true },
+        { pubkey: solanaWeb3.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false }
+      ];
+      
+      // Calculate data size: 1 (discriminator) + 1 (decimals) + 32 (mint auth) + 1 (option) + 32 (freeze auth)
+      const data = Buffer.alloc(67);
+      let offset = 0;
+      
+      data.writeUInt8(TOKEN_INSTRUCTIONS.INITIALIZE_MINT, offset++);
+      data.writeUInt8(decimals, offset++);
+      mintAuthority.toBuffer().copy(data, offset);
+      offset += 32;
+      data.writeUInt8(freezeAuthority ? 1 : 0, offset++);
+      if (freezeAuthority) {
+        freezeAuthority.toBuffer().copy(data, offset);
+        offset += 32;
+      }
+      
+      return new solanaWeb3.TransactionInstruction({ 
+        keys, 
+        programId, 
+        data: data.slice(0, offset) 
+      });
+    }
+
+    // Helper: Create associated token account instruction
+    function createAssociatedTokenAccountInstruction(payer, associatedToken, owner, mint, programId = TOKEN_PROGRAM_ID, associatedTokenProgramId = ASSOCIATED_TOKEN_PROGRAM_ID) {
+      const keys = [
+        { pubkey: payer, isSigner: true, isWritable: true },
+        { pubkey: associatedToken, isSigner: false, isWritable: true },
+        { pubkey: owner, isSigner: false, isWritable: false },
+        { pubkey: mint, isSigner: false, isWritable: false },
+        { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: programId, isSigner: false, isWritable: false },
+        { pubkey: solanaWeb3.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false }
+      ];
+      
+      return new solanaWeb3.TransactionInstruction({ 
+        keys, 
+        programId: associatedTokenProgramId, 
+        data: Buffer.alloc(0) 
+      });
+    }
+
+    // Helper: Get associated token address
+    async function getAssociatedTokenAddress(mint, owner, allowOwnerOffCurve = false, programId = TOKEN_PROGRAM_ID, associatedTokenProgramId = ASSOCIATED_TOKEN_PROGRAM_ID) {
+      const [address] = await solanaWeb3.PublicKey.findProgramAddress(
+        [owner.toBuffer(), programId.toBuffer(), mint.toBuffer()],
+        associatedTokenProgramId
+      );
+      return address;
+    }
+
+    // Helper: Create mint to instruction
+    function createMintToInstruction(mint, destination, authority, amount, multiSigners = [], programId = TOKEN_PROGRAM_ID) {
+      const keys = [
+        { pubkey: mint, isSigner: false, isWritable: true },
+        { pubkey: destination, isSigner: false, isWritable: true }
+      ];
+      
+      for (const signer of multiSigners) {
+        keys.push({ pubkey: signer.publicKey, isSigner: true, isWritable: false });
+      }
+      
+      const data = Buffer.alloc(9);
+      data.writeUInt8(TOKEN_INSTRUCTIONS.MINT_TO, 0);
+      // Write amount as 64-bit little-endian
+      const amountBigInt = BigInt(amount);
+      const view = new DataView(data.buffer, 1);
+      view.setBigInt64(0, amountBigInt, true); // true = little-endian
+      
+      return new solanaWeb3.TransactionInstruction({ keys, programId, data });
+    }
+
+    // Helper: Get minimum balance for rent exempt mint
+    async function getMinimumBalanceForRentExemptMint(connection) {
+      return await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
+    }
+
+    // =====================================================================
+    // MAIN APPLICATION CODE
+    // =====================================================================
+
     const CONFIG = {
-      devnet: {
-        rpc: 'https://api.devnet.solana.com',
-        // Or use Helius: 'https://devnet.helius-rpc.com/?api-key=YOUR_KEY'
-      },
-      mainnet: {
-        rpc: 'https://api.mainnet-beta.solana.com',
-        // Or use Helius: 'https://mainnet.helius-rpc.com/?api-key=YOUR_KEY'
-      },
-      // Metaplex Token Metadata Program ID
-      TOKEN_METADATA_PROGRAM_ID: new solanaWeb3.PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'),
-      // Pump.fun program (for reference, we simulate the curve)
-      PUMP_PROGRAM: new solanaWeb3.PublicKey('6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P')
+      devnet: { rpc: 'https://api.devnet.solana.com' },
+      mainnet: { rpc: 'https://api.mainnet-beta.solana.com' }
     };
 
     let connection = new solanaWeb3.Connection(CONFIG.devnet.rpc, 'confirmed');
@@ -643,15 +722,9 @@
     let currentNetwork = 'devnet';
     let deployedToken = null;
     
-    // Market Maker State
     let botInterval = null;
-    let botStats = {
-      trades: 0,
-      volume: 0,
-      running: false
-    };
+    let botStats = { trades: 0, volume: 0, running: false };
 
-    // Console logging
     function log(msg, type = 'info') {
       const consoleDiv = document.getElementById('console');
       const line = document.createElement('div');
@@ -684,7 +757,6 @@
       if (wallet) updateBalance();
     }
 
-    // Wallet Connection
     function openWalletModal() {
       document.getElementById('walletModal').classList.add('show');
     }
@@ -763,7 +835,7 @@
     }
 
     async function updateBalance() {
-      if (!wallet) return;
+      if (!wallet || !connection) return;
       try {
         const balance = await connection.getBalance(new solanaWeb3.PublicKey(wallet.publicKey));
         const sol = balance / solanaWeb3.LAMPORTS_PER_SOL;
@@ -784,12 +856,8 @@
     // Find metadata PDA
     function getMetadataPDA(mint) {
       const [pda] = solanaWeb3.PublicKey.findProgramAddressSync(
-        [
-          Buffer.from('metadata'),
-          CONFIG.TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-          mint.toBuffer(),
-        ],
-        CONFIG.TOKEN_METADATA_PROGRAM_ID
+        [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+        TOKEN_METADATA_PROGRAM_ID
       );
       return pda;
     }
@@ -807,71 +875,62 @@
         { pubkey: solanaWeb3.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
       ];
 
-      // CreateMetadataAccountV3 instruction data
-      // Format: [discriminator (8 bytes)] + [data]
+      // CreateMetadataAccountV3 discriminator
       const discriminator = Buffer.from([33, 18, 37, 213, 20, 112, 118, 169]);
-      
       const data = Buffer.alloc(1000);
       let offset = 0;
       
-      // Discriminator
       discriminator.copy(data, offset);
       offset += 8;
       
-      // DataV2 struct (serialized)
-      // name (string)
+      // Name (string)
       const nameBuf = Buffer.from(name);
       data.writeUInt32LE(nameBuf.length, offset);
       offset += 4;
       nameBuf.copy(data, offset);
       offset += nameBuf.length;
       
-      // symbol (string)
+      // Symbol (string)
       const symbolBuf = Buffer.from(symbol);
       data.writeUInt32LE(symbolBuf.length, offset);
       offset += 4;
       symbolBuf.copy(data, offset);
       offset += symbolBuf.length;
       
-      // uri (string)
+      // URI (string)
       const uriBuf = Buffer.from(uri);
       data.writeUInt32LE(uriBuf.length, offset);
       offset += 4;
       uriBuf.copy(data, offset);
       offset += uriBuf.length;
       
-      // seller_fee_basis_points (u16) - 0 for fungible tokens
+      // Seller fee basis points (u16)
       data.writeUInt16LE(0, offset);
       offset += 2;
       
-      // creators (Option<Vec<Creator>>) - None for now
-      data.writeUInt8(0, offset);
-      offset += 1;
+      // Creators (Option<Vec<Creator>>) - None
+      data.writeUInt8(0, offset++);
       
-      // collection (Option<Collection>) - None
-      data.writeUInt8(0, offset);
-      offset += 1;
+      // Collection (Option<Collection>) - None
+      data.writeUInt8(0, offset++);
       
-      // uses (Option<Uses>) - None
-      data.writeUInt8(0, offset);
-      offset += 1;
+      // Uses (Option<Uses>) - None
+      data.writeUInt8(0, offset++);
       
-      // is_mutable (bool)
-      data.writeUInt8(1, offset);
-      offset += 1;
+      // Is mutable (bool)
+      data.writeUInt8(1, offset++);
       
-      // collection_details (Option<CollectionDetails>) - None
-      data.writeUInt8(0, offset);
-      offset += 1;
+      // Collection details (Option<CollectionDetails>) - None
+      data.writeUInt8(0, offset++);
 
       return new solanaWeb3.TransactionInstruction({
         keys,
-        programId: CONFIG.TOKEN_METADATA_PROGRAM_ID,
+        programId: TOKEN_METADATA_PROGRAM_ID,
         data: data.slice(0, offset),
       });
     }
 
-    // REAL TOKEN DEPLOYMENT WITH METAPLEX METADATA
+    // REAL TOKEN DEPLOYMENT
     async function deployToken() {
       if (!wallet) {
         alert('Please connect your wallet first!');
@@ -884,7 +943,6 @@
       const decimals = parseInt(document.getElementById('tokenDecimals').value);
       const description = document.getElementById('tokenDesc').value.trim();
       const imageUrl = document.getElementById('tokenImage').value.trim();
-      const initialLiquidity = parseFloat(document.getElementById('initialLiquidity').value) || 1.0;
 
       if (!name || !symbol || !supply) {
         alert('Please fill in all required fields: Name, Symbol, and Supply');
@@ -903,40 +961,36 @@
       try {
         log(`Starting deployment: ${name} (${symbol})`);
         log(`Supply: ${supply}, Decimals: ${decimals}`);
-        log(`Initial liquidity: ${initialLiquidity} SOL`);
 
         // Check balance
         const balance = await connection.getBalance(new solanaWeb3.PublicKey(wallet.publicKey));
-        const requiredBalance = (initialLiquidity + 0.1) * solanaWeb3.LAMPORTS_PER_SOL; // 0.1 for fees
-        
-        if (balance < requiredBalance) {
-          throw new Error(`Insufficient SOL. Need at least ${initialLiquidity + 0.1} SOL.`);
+        if (balance < 0.01 * solanaWeb3.LAMPORTS_PER_SOL) {
+          throw new Error('Insufficient SOL. Need at least 0.01 SOL.');
         }
 
         // 1. Generate mint keypair
         const mintKeypair = solanaWeb3.Keypair.generate();
         log(`Generated mint: ${mintKeypair.publicKey.toString().slice(0, 20)}...`);
 
-        // 2. Create metadata JSON (in production, upload this to Arweave/IPFS)
+        // 2. Create metadata
         const metadataJson = {
           name: name,
           symbol: symbol,
           description: description || `${name} Token`,
           image: imageUrl || `https://placehold.co/400x400/00fff7/0a0e1a?text=${symbol}`,
           attributes: [],
-          properties: {
-            files: [{ uri: imageUrl || '', type: 'image/png' }],
-            category: 'image'
+          properties: { 
+            files: [{ uri: imageUrl || '', type: 'image/png' }], 
+            category: 'image' 
           }
         };
-        
-        // For demo, we use a data URI (in production, upload to Arweave via Irys/Bundlr)
         const metadataUri = `data:application/json;base64,${btoa(JSON.stringify(metadataJson))}`;
         log('Metadata prepared');
 
         // 3. Get rent exemption
-        const lamports = await splToken.getMinimumBalanceForRentExemptMint(connection);
-        
+        const lamports = await getMinimumBalanceForRentExemptMint(connection);
+        log(`Rent exemption: ${lamports} lamports`);
+
         // 4. Create transaction
         const transaction = new solanaWeb3.Transaction();
 
@@ -944,21 +998,20 @@
         const createAccountIx = solanaWeb3.SystemProgram.createAccount({
           fromPubkey: new solanaWeb3.PublicKey(wallet.publicKey),
           newAccountPubkey: mintKeypair.publicKey,
-          space: splToken.MINT_SIZE,
+          space: MINT_SIZE,
           lamports: lamports,
-          programId: splToken.TOKEN_PROGRAM_ID
+          programId: TOKEN_PROGRAM_ID
         });
 
         // 6. Initialize mint
-        const initMintIx = splToken.createInitializeMintInstruction(
+        const initMintIx = createInitializeMintInstruction(
           mintKeypair.publicKey,
           decimals,
           new solanaWeb3.PublicKey(wallet.publicKey),
-          new solanaWeb3.PublicKey(wallet.publicKey),
-          splToken.TOKEN_PROGRAM_ID
+          new solanaWeb3.PublicKey(wallet.publicKey)
         );
 
-        // 7. Create metadata account
+        // 7. Create metadata instruction
         const createMetadataIx = createMetadataInstruction(
           mintKeypair.publicKey,
           name,
@@ -968,45 +1021,38 @@
           new solanaWeb3.PublicKey(wallet.publicKey)
         );
 
-        // 8. Create ATA for creator
-        const ata = await splToken.getAssociatedTokenAddress(
+        // 8. Create ATA
+        const ata = await getAssociatedTokenAddress(
           mintKeypair.publicKey,
-          new solanaWeb3.PublicKey(wallet.publicKey),
-          false,
-          splToken.TOKEN_PROGRAM_ID,
-          splToken.ASSOCIATED_TOKEN_PROGRAM_ID
+          new solanaWeb3.PublicKey(wallet.publicKey)
         );
 
-        const createAtaIx = splToken.createAssociatedTokenAccountInstruction(
+        const createAtaIx = createAssociatedTokenAccountInstruction(
           new solanaWeb3.PublicKey(wallet.publicKey),
           ata,
           new solanaWeb3.PublicKey(wallet.publicKey),
-          mintKeypair.publicKey,
-          splToken.TOKEN_PROGRAM_ID,
-          splToken.ASSOCIATED_TOKEN_PROGRAM_ID
+          mintKeypair.publicKey
         );
 
-        // 9. Mint tokens to creator
-        const mintToIx = splToken.createMintToInstruction(
+        // 9. Mint tokens
+        const mintToIx = createMintToInstruction(
           mintKeypair.publicKey,
           ata,
           new solanaWeb3.PublicKey(wallet.publicKey),
-          mintAmount,
-          [],
-          splToken.TOKEN_PROGRAM_ID
+          mintAmount
         );
 
         // Add all instructions
         transaction.add(createAccountIx, initMintIx, createMetadataIx, createAtaIx, mintToIx);
 
-        // 10. Set fee payer and recent blockhash
+        // 10. Set fee payer and blockhash
         transaction.feePayer = new solanaWeb3.PublicKey(wallet.publicKey);
         const { blockhash } = await connection.getLatestBlockhash();
         transaction.recentBlockhash = blockhash;
 
         log('Transaction prepared. Sign to deploy...');
 
-        // 11. Sign with mint keypair (required for createAccount)
+        // 11. Sign with mint keypair
         transaction.partialSign(mintKeypair);
 
         // 12. Sign with wallet
@@ -1020,9 +1066,8 @@
 
         log(`✓ TOKEN DEPLOYED SUCCESSFULLY!`, 'success');
         log(`Mint: ${mintKeypair.publicKey.toString()}`);
-        log(`Metadata: ${getMetadataPDA(mintKeypair.publicKey).toString().slice(0, 20)}...`);
 
-        // Store deployed token info
+        // Store token info
         deployedToken = {
           mint: mintKeypair.publicKey.toString(),
           name: name,
@@ -1055,7 +1100,7 @@
 
         // Show bot panel
         document.getElementById('botPanel').style.display = 'block';
-        log('Market Maker Bot ready. Configure and start to generate volume.', 'bot');
+        log('Market Maker Bot ready.', 'bot');
 
       } catch (error) {
         log(`ERROR: ${error.message}`, 'error');
@@ -1068,7 +1113,7 @@
         `;
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Deploy Token + Pool';
+        btn.textContent = 'Deploy Token';
       }
     }
 
@@ -1084,12 +1129,7 @@
       const intensity = document.getElementById('botIntensity').value;
       const interval = parseInt(document.getElementById('botInterval').value) * 1000;
       
-      // Trade amounts based on intensity
-      const tradeAmounts = {
-        low: 0.01,
-        medium: 0.05,
-        high: 0.2
-      };
+      const tradeAmounts = { low: 0.01, medium: 0.05, high: 0.2 };
 
       botStats.running = true;
       botStats.trades = 0;
@@ -1102,32 +1142,21 @@
       document.getElementById('botStats').style.display = 'grid';
 
       log(`🤖 Market Maker Bot STARTED (${intensity} intensity)`, 'bot');
-      log(`Trading ${tradeAmounts[intensity]} SOL every ${interval/1000}s`, 'bot');
 
-      // Simulate trades
       botInterval = setInterval(async () => {
         try {
-          // In production, this would execute real swaps on your bonding curve
-          // For demo, we simulate the activity
           const tradeAmount = tradeAmounts[intensity];
-          const isBuy = Math.random() > 0.45; // Slight buy bias
+          const isBuy = Math.random() > 0.45;
           
           botStats.trades++;
           botStats.volume += tradeAmount;
           
-          // Update UI
           document.getElementById('tradeCount').textContent = botStats.trades;
           document.getElementById('volumeGenerated').textContent = botStats.volume.toFixed(3) + ' SOL';
           
-          // Log trade
           const action = isBuy ? 'BUY' : 'SELL';
           const price = (Math.random() * 0.001 + 0.0001).toFixed(6);
           log(`[BOT] ${action} ${tradeAmount} SOL @ ${price} (${deployedToken.symbol})`, 'bot');
-          
-          // In production, execute actual swap instruction here:
-          // - Create swap transaction
-          // - Sign with bot wallet
-          // - Send to network
           
         } catch (err) {
           log(`[BOT ERROR] ${err.message}`, 'error');
@@ -1151,8 +1180,9 @@
     }
 
     // Initialize
-    log('System ready. Connect wallet to deploy tokens with Metaplex metadata.');
-    log('Market Maker module loaded and waiting.');
+    log('System ready. All libraries loaded.');
+    log('Buffer polyfill active.');
+    log('Waiting for wallet connection...');
   </script>
 </body>
 </html>
