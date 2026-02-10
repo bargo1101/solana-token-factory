@@ -4,12 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0a0e1a">
-  <title>NEXUS LAUNCHPAD 2121 - BUFFER FIXED</title>
+  <title>NEXUS LAUNCHPAD 2121 - PHANTOM READY</title>
   
-  <!-- Solana Web3.js -->
+  <!-- Only Solana Web3.js - no external Buffer library -->
   <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
-  <!-- Buffer polyfill for browser -->
-  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
   
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
@@ -459,7 +457,7 @@
         <span class="neon-violet">LAUNCHPAD</span>
       </h1>
       <div class="header-divider"></div>
-      <p style="color: #00a8cc; font-size: 12px; letter-spacing: 2px;">BUFFER FIXED - READY TO DEPLOY</p>
+      <p style="color: #00a8cc; font-size: 12px; letter-spacing: 2px;">PHANTOM IN-APP BROWSER READY</p>
     </div>
 
     <!-- Network Selection -->
@@ -587,8 +585,8 @@
       <div class="console" id="console">
         <div class="console-line" style="color: #00ff88;">[SYSTEM] NEXUS Launchpad initialized</div>
         <div class="console-line">[SYSTEM] Solana Web3.js loaded</div>
-        <div class="console-line">[SYSTEM] Buffer polyfill loaded</div>
-        <div class="console-line">[SYSTEM] Ready for deployment</div>
+        <div class="console-line">[SYSTEM] Uint8Array mode (no Buffer)</div>
+        <div class="console-line">[SYSTEM] Phantom in-app browser ready</div>
       </div>
     </div>
   </div>
@@ -605,13 +603,62 @@
   </div>
 
   <script>
-    // Ensure Buffer is available globally
-    if (typeof window.Buffer === 'undefined') {
-      window.Buffer = buffer.Buffer;
+    // =====================================================================
+    // PURE JAVASCRIPT HELPERS - NO BUFFER DEPENDENCY
+    // Uses Uint8Array instead of Buffer for Phantom compatibility
+    // =====================================================================
+
+    // Helper: Convert string to Uint8Array
+    function stringToBytes(str) {
+      return new TextEncoder().encode(str);
+    }
+
+    // Helper: Create Uint8Array from hex string
+    function hexToBytes(hex) {
+      const bytes = new Uint8Array(hex.length / 2);
+      for (let i = 0; i < hex.length; i += 2) {
+        bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+      }
+      return bytes;
+    }
+
+    // Helper: Concatenate Uint8Arrays
+    function concatBytes(...arrays) {
+      const totalLength = arrays.reduce((acc, arr) => acc + arr.length, 0);
+      const result = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const arr of arrays) {
+        result.set(arr, offset);
+        offset += arr.length;
+      }
+      return result;
+    }
+
+    // Helper: Write uint32 little-endian
+    function writeUInt32LE(value, buffer, offset) {
+      buffer[offset] = value & 0xff;
+      buffer[offset + 1] = (value >> 8) & 0xff;
+      buffer[offset + 2] = (value >> 16) & 0xff;
+      buffer[offset + 3] = (value >> 24) & 0xff;
+    }
+
+    // Helper: Write uint16 little-endian
+    function writeUInt16LE(value, buffer, offset) {
+      buffer[offset] = value & 0xff;
+      buffer[offset + 1] = (value >> 8) & 0xff;
+    }
+
+    // Helper: Write BigInt64 little-endian
+    function writeBigInt64LE(value, buffer, offset) {
+      const bigValue = BigInt.asUintN(64, BigInt(value));
+      const low = Number(bigValue & BigInt(0xffffffff));
+      const high = Number(bigValue >> BigInt(32));
+      writeUInt32LE(low, buffer, offset);
+      writeUInt32LE(high, buffer, offset + 4);
     }
 
     // =====================================================================
-    // EMBEDDED SPL TOKEN PROGRAM CONSTANTS AND INSTRUCTION BUILDERS
+    // SPL TOKEN PROGRAM CONSTANTS (Uint8Array version)
     // =====================================================================
     
     const TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
@@ -625,35 +672,46 @@
       MINT_TO: 7
     };
 
-    // Helper: Create initialize mint instruction
+    // =====================================================================
+    // INSTRUCTION BUILDERS USING UINT8ARRAY
+    // =====================================================================
+
+    // Create initialize mint instruction
     function createInitializeMintInstruction(mint, decimals, mintAuthority, freezeAuthority, programId = TOKEN_PROGRAM_ID) {
       const keys = [
         { pubkey: mint, isSigner: false, isWritable: true },
         { pubkey: solanaWeb3.SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false }
       ];
       
-      // Calculate data size: 1 (discriminator) + 1 (decimals) + 32 (mint auth) + 1 (option) + 32 (freeze auth)
-      const data = Buffer.alloc(67);
+      // Data layout: [1 byte discriminator, 1 byte decimals, 32 bytes mint auth, 1 byte option, 32 bytes freeze auth (optional)]
+      const data = new Uint8Array(freezeAuthority ? 67 : 35);
       let offset = 0;
       
-      data.writeUInt8(TOKEN_INSTRUCTIONS.INITIALIZE_MINT, offset++);
-      data.writeUInt8(decimals, offset++);
-      mintAuthority.toBuffer().copy(data, offset);
+      data[offset++] = TOKEN_INSTRUCTIONS.INITIALIZE_MINT;
+      data[offset++] = decimals;
+      
+      // Mint authority (32 bytes)
+      const mintAuthBytes = mintAuthority.toBytes();
+      data.set(mintAuthBytes, offset);
       offset += 32;
-      data.writeUInt8(freezeAuthority ? 1 : 0, offset++);
+      
+      // Freeze authority option
+      data[offset++] = freezeAuthority ? 1 : 0;
+      
       if (freezeAuthority) {
-        freezeAuthority.toBuffer().copy(data, offset);
+        const freezeAuthBytes = freezeAuthority.toBytes();
+        data.set(freezeAuthBytes, offset);
         offset += 32;
       }
       
       return new solanaWeb3.TransactionInstruction({ 
         keys, 
         programId, 
-        data: data.slice(0, offset) 
+        data: data.slice(0, offset)
       });
     }
 
-    // Helper: Create associated token account instruction
+    // Create associated token account instruction
     function createAssociatedTokenAccountInstruction(payer, associatedToken, owner, mint, programId = TOKEN_PROGRAM_ID, associatedTokenProgramId = ASSOCIATED_TOKEN_PROGRAM_ID) {
       const keys = [
         { pubkey: payer, isSigner: true, isWritable: true },
@@ -668,20 +726,20 @@
       return new solanaWeb3.TransactionInstruction({ 
         keys, 
         programId: associatedTokenProgramId, 
-        data: Buffer.alloc(0) 
+        data: new Uint8Array(0)
       });
     }
 
-    // Helper: Get associated token address
+    // Get associated token address
     async function getAssociatedTokenAddress(mint, owner, allowOwnerOffCurve = false, programId = TOKEN_PROGRAM_ID, associatedTokenProgramId = ASSOCIATED_TOKEN_PROGRAM_ID) {
       const [address] = await solanaWeb3.PublicKey.findProgramAddress(
-        [owner.toBuffer(), programId.toBuffer(), mint.toBuffer()],
+        [owner.toBytes(), programId.toBytes(), mint.toBytes()],
         associatedTokenProgramId
       );
       return address;
     }
 
-    // Helper: Create mint to instruction
+    // Create mint to instruction
     function createMintToInstruction(mint, destination, authority, amount, multiSigners = [], programId = TOKEN_PROGRAM_ID) {
       const keys = [
         { pubkey: mint, isSigner: false, isWritable: true },
@@ -692,23 +750,21 @@
         keys.push({ pubkey: signer.publicKey, isSigner: true, isWritable: false });
       }
       
-      const data = Buffer.alloc(9);
-      data.writeUInt8(TOKEN_INSTRUCTIONS.MINT_TO, 0);
-      // Write amount as 64-bit little-endian
-      const amountBigInt = BigInt(amount);
-      const view = new DataView(data.buffer, 1);
-      view.setBigInt64(0, amountBigInt, true); // true = little-endian
+      // Data: [1 byte discriminator, 8 bytes amount]
+      const data = new Uint8Array(9);
+      data[0] = TOKEN_INSTRUCTIONS.MINT_TO;
+      writeBigInt64LE(amount, data, 1);
       
       return new solanaWeb3.TransactionInstruction({ keys, programId, data });
     }
 
-    // Helper: Get minimum balance for rent exempt mint
+    // Get minimum balance for rent exempt mint
     async function getMinimumBalanceForRentExemptMint(connection) {
       return await connection.getMinimumBalanceForRentExemption(MINT_SIZE);
     }
 
     // =====================================================================
-    // MAIN APPLICATION CODE
+    // MAIN APPLICATION
     // =====================================================================
 
     const CONFIG = {
@@ -856,13 +912,13 @@
     // Find metadata PDA
     function getMetadataPDA(mint) {
       const [pda] = solanaWeb3.PublicKey.findProgramAddressSync(
-        [Buffer.from('metadata'), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+        [stringToBytes('metadata'), TOKEN_METADATA_PROGRAM_ID.toBytes(), mint.toBytes()],
         TOKEN_METADATA_PROGRAM_ID
       );
       return pda;
     }
 
-    // Create metadata instruction
+    // Create metadata instruction using Uint8Array
     function createMetadataInstruction(mint, name, symbol, uri, payer, updateAuthority) {
       const metadataPDA = getMetadataPDA(mint);
       
@@ -876,57 +932,55 @@
       ];
 
       // CreateMetadataAccountV3 discriminator
-      const discriminator = Buffer.from([33, 18, 37, 213, 20, 112, 118, 169]);
-      const data = Buffer.alloc(1000);
+      const discriminator = new Uint8Array([33, 18, 37, 213, 20, 112, 118, 169]);
+      
+      // Calculate total size needed
+      const nameBytes = stringToBytes(name);
+      const symbolBytes = stringToBytes(symbol);
+      const uriBytes = stringToBytes(uri);
+      
+      // Total: 8 (discriminator) + 4 + name.length + 4 + symbol.length + 4 + uri.length + 2 (fee) + 1 + 1 + 1 + 1 + 1
+      const totalSize = 8 + 4 + nameBytes.length + 4 + symbolBytes.length + 4 + uriBytes.length + 2 + 5;
+      const data = new Uint8Array(totalSize);
       let offset = 0;
       
-      discriminator.copy(data, offset);
+      // Discriminator
+      data.set(discriminator, offset);
       offset += 8;
       
-      // Name (string)
-      const nameBuf = Buffer.from(name);
-      data.writeUInt32LE(nameBuf.length, offset);
+      // Name (string: 4 bytes length + content)
+      writeUInt32LE(nameBytes.length, data, offset);
       offset += 4;
-      nameBuf.copy(data, offset);
-      offset += nameBuf.length;
+      data.set(nameBytes, offset);
+      offset += nameBytes.length;
       
-      // Symbol (string)
-      const symbolBuf = Buffer.from(symbol);
-      data.writeUInt32LE(symbolBuf.length, offset);
+      // Symbol
+      writeUInt32LE(symbolBytes.length, data, offset);
       offset += 4;
-      symbolBuf.copy(data, offset);
-      offset += symbolBuf.length;
+      data.set(symbolBytes, offset);
+      offset += symbolBytes.length;
       
-      // URI (string)
-      const uriBuf = Buffer.from(uri);
-      data.writeUInt32LE(uriBuf.length, offset);
+      // URI
+      writeUInt32LE(uriBytes.length, data, offset);
       offset += 4;
-      uriBuf.copy(data, offset);
-      offset += uriBuf.length;
+      data.set(uriBytes, offset);
+      offset += uriBytes.length;
       
       // Seller fee basis points (u16)
-      data.writeUInt16LE(0, offset);
+      writeUInt16LE(0, data, offset);
       offset += 2;
       
-      // Creators (Option<Vec<Creator>>) - None
-      data.writeUInt8(0, offset++);
-      
-      // Collection (Option<Collection>) - None
-      data.writeUInt8(0, offset++);
-      
-      // Uses (Option<Uses>) - None
-      data.writeUInt8(0, offset++);
-      
-      // Is mutable (bool)
-      data.writeUInt8(1, offset++);
-      
-      // Collection details (Option<CollectionDetails>) - None
-      data.writeUInt8(0, offset++);
+      // Options: creators, collection, uses, is_mutable, collection_details
+      data[offset++] = 0; // creators: None
+      data[offset++] = 0; // collection: None
+      data[offset++] = 0; // uses: None
+      data[offset++] = 1; // is_mutable: true
+      data[offset++] = 0; // collection_details: None
 
       return new solanaWeb3.TransactionInstruction({
         keys,
         programId: TOKEN_METADATA_PROGRAM_ID,
-        data: data.slice(0, offset),
+        data: data.slice(0, offset)
       });
     }
 
@@ -1180,8 +1234,8 @@
     }
 
     // Initialize
-    log('System ready. All libraries loaded.');
-    log('Buffer polyfill active.');
+    log('System ready. Uint8Array mode active.');
+    log('No Buffer dependency - Phantom compatible.');
     log('Waiting for wallet connection...');
   </script>
 </body>
